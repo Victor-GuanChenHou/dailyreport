@@ -19,7 +19,9 @@ app = Flask(__name__)
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')  # Messaging API Channel Access Token
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
 TEMP='/home/kingzaeip1/dailyreport/temp'
+PNG='/home/kingzaeip1/dailyreport/static/img'
 app.config['TEMP'] = TEMP
+app.config['PNG'] = PNG
 line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 # ===== 全域資料 =====
@@ -126,7 +128,9 @@ def editstore():
 @app.route("/files/<path:filename>")
 def serve_file(filename):
     return send_from_directory(app.config['TEMP'], filename, as_attachment=True)
-
+@app.route("/png/<path:filename>")
+def png_file(filename):
+    return send_from_directory(app.config['PNG'], filename, as_attachment=True)
 #================LINE WEBHOOK=====================
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -147,6 +151,7 @@ def send_excel_link(user_id, file_name):
     file_message = VideoSendMessage(
         original_content_url=file_url,  # 檔案實際 URL
         file_name=file_name,
+        preview_image_url="https://cf23fc37feab.ngrok-free.app/png/logo.png",
         file_size = os.path.getsize(os.path.join(app.config['TEMP'], file_name))  # 這裡填檔案大小（bytes），可用 os.path.getsize() 自動取得
     )
    # line_bot_api.push_message(user_id, TextSendMessage(text=f"您的檔案下載連結：{file_url}"))
