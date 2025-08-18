@@ -7,7 +7,7 @@ from linebot.models import TextSendMessage
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, VideoSendMessage
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, FileMessage
 from dotenv import load_dotenv
 import os
 ENV = './.env' 
@@ -147,8 +147,9 @@ def callback():
 # 發送檔案下載連結
 def send_excel_link(user_id, file_name):
     # 假設 Flask 跑在 localhost:5000
+    print(file_name)
     file_url = f"https://cf23fc37feab.ngrok-free.app/files/{file_name}"
-    file_message = VideoSendMessage(
+    file_message = FileMessage(
         original_content_url=file_url,  # 檔案實際 URL
         file_name=file_name,
         preview_image_url="https://cf23fc37feab.ngrok-free.app/png/logo.png",
