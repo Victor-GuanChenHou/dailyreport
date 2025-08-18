@@ -8,6 +8,7 @@ from linebot.v3 import (WebhookHandler)
 from linebot.v3.exceptions import (InvalidSignatureError)
 from linebot.v3.messaging import (Configuration, ApiClient,MessagingApi,ReplyMessageRequest,TextMessage)
 from linebot.v3.webhooks import (MessageEvent,TextMessageContent)
+from linebot.v3.messaging.models import FlexMessage
 from dotenv import load_dotenv
 import os
 ENV = './.env' 
@@ -148,18 +149,35 @@ def callback():
     return 'OK'
 
 # 發送檔案下載連結
-def send_excel_link(user_id, file_name):
-    # 假設 Flask 跑在 localhost:5000
-    print(file_name)
-    file_url = f"https://cf23fc37feab.ngrok-free.app/files/{file_name}"
-    file_message = FileMessage(
-        original_content_url=file_url,  # 檔案實際 URL
-        file_name=file_name,
-        preview_image_url="https://cf23fc37feab.ngrok-free.app/png/logo.png",
-        file_size = os.path.getsize(os.path.join(app.config['TEMP'], file_name))  # 這裡填檔案大小（bytes），可用 os.path.getsize() 自動取得
+def send_excel_button(user_id, file_name):
+    file_url = f"https://cf23fc37feab.ngrok-free.app/files/{file_name}"  # 你的公開下載 URL
+
+    flex_content = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": [
+                {
+                    "type": "button",
+                    "style": "primary",
+                    "action": {
+                        "type": "uri",
+                        "label": f"下載 {file_name}",
+                        "uri": file_url
+                    }
+                }
+            ]
+        }
+    }
+
+    flex_message = FlexMessage(
+        alt_text=f"下載 {file_name}",
+        contents=flex_content
     )
-   # line_bot_api.push_message(user_id, TextSendMessage(text=f"您的檔案下載連結：{file_url}"))
-    line_bot_api.push_message(user_id, file_message)
+
+    line_bot_api.push_message(user_id, flex_message)
 # ====== 使用者加好友事件 (FollowEvent) ======
 # @handler.add(FollowEvent)
 # def handle_follow(event):
