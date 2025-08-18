@@ -1,0 +1,24 @@
+[
+    {
+        "user_id": "A14176",
+        "name": "侯冠辰",
+        "departments": [
+            "a03005",
+            "a03009",
+            "a03031",
+            "a03032",
+            "a03036",
+            "dc03022"
+        ],
+        "email": "victor.hou@kingza.com.tw"
+    },
+    {
+        "departments": [
+            "a03003",
+            "a03005"
+        ],
+        "email": "victor.hou@kingza.com.tw",
+        "user_id": "A01672",
+        "name": "歐思辰"
+    }
+]
