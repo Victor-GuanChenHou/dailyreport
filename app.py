@@ -161,13 +161,11 @@ def send_excel_button(user_id, file_name):
     file_url = f"https://cf23fc37feab.ngrok-free.app/files/{file_name}"
 
     buttons_template = ButtonsTemplate(
-        thumbnail_image_url="https://steam.oxxostudio.tw/download/python/line-template-message-demo.jpg",
-        title="OXXO.STUDIO",
-        text="這是按鈕樣板",
+        thumbnail_image_url="https://cf23fc37feab.ngrok-free.app/png/logo.png",
+        title="日報表",
+        text="2025-08-18",
         actions=[
-            PostbackAction(label="postback", data="發送 postback"),
-            MessageAction(label="說 hello", text="hello"),
-            URIAction(label="前往 STEAM 教育學習網", uri="https://steam.oxxostudio.tw"),
+            URIAction(label="Download", uri=file_url),
         ]
     )
     message = TemplateMessage(
@@ -180,7 +178,7 @@ def send_excel_button(user_id, file_name):
             messages=[message]
         )
     )
-    line_bot_api.push_message(line_bot_api)
+
 # ====== 使用者加好友事件 (FollowEvent) ======
 # @handler.add(FollowEvent)
 # def handle_follow(event):
