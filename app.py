@@ -174,7 +174,7 @@ def send_excel_link(user_id, file_name):
 
 
 # ====== 使用者傳訊息事件 ======
-@handler.add(MessageEvent, message=TextMessage)
+@handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     user_id = event.source.user_id
     user_text = event.message.text
