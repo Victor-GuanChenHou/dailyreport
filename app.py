@@ -1,12 +1,13 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory, abort
+from flask import Flask, render_template, request, jsonify,send_from_directory
 import json
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, FileMessage
-from linebot.v3.messaging import MessagingApi
+from flask import Flask, request, abort
+from linebot.v3 import (WebhookHandler)
+from linebot.v3.exceptions import (InvalidSignatureError)
+from linebot.v3.messaging import (Configuration, ApiClient,MessagingApi,ReplyMessageRequest,TextMessage)
+from linebot.v3.webhooks import (MessageEvent,TextMessageContent)
 from dotenv import load_dotenv
 import os
 ENV = './.env' 
@@ -21,9 +22,10 @@ TEMP='/home/kingzaeip1/dailyreport/temp'
 PNG='/home/kingzaeip1/dailyreport/static/img'
 app.config['TEMP'] = TEMP
 app.config['PNG'] = PNG
-line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
+configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
-messaging_api = MessagingApi(channel_access_token=CHANNEL_ACCESS_TOKEN)  # v3 SDK
+api_client = ApiClient(configuration)
+line_bot_api = MessagingApi(api_client)
 
 # ===== 全域資料 =====
 
@@ -156,9 +158,8 @@ def send_excel_link(user_id, file_name):
         preview_image_url="https://cf23fc37feab.ngrok-free.app/png/logo.png",
         file_size = os.path.getsize(os.path.join(app.config['TEMP'], file_name))  # 這裡填檔案大小（bytes），可用 os.path.getsize() 自動取得
     )
-
-    messaging_api.push_message(to=user_id, messages=[file_message])
-    # line_bot_api.push_message(user_id, TextSendMessage(text=f"您的檔案下載連結：{file_url}"))
+   # line_bot_api.push_message(user_id, TextSendMessage(text=f"您的檔案下載連結：{file_url}"))
+    line_bot_api.push_message(user_id, file_message)
 # ====== 使用者加好友事件 (FollowEvent) ======
 # @handler.add(FollowEvent)
 # def handle_follow(event):
@@ -186,8 +187,8 @@ def handle_message(event):
             result = rest
             # 回覆訊息
             line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=f"您的工號是: {result}\n你的ID是: {user_id}")
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=f"您的工號是: {result}\n你的ID是: {user_id}")]
             )
     elif user_text=='Data':
         send_excel_link('Ue8115fd6e2a0ffb3170fa8a0949ce4b9','testdata.xlsx')
