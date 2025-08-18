@@ -8,13 +8,19 @@ from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, FollowEvent
+from dotenv import load_dotenv
+import os
+ENV = './.env' 
+load_dotenv(dotenv_path=ENV)
 
 app = Flask(__name__)
 
 # ===== LINE 設定 =====
-LINE_CHANNEL_ACCESS_TOKEN = "YOUR_CHANNEL_ACCESS_TOKEN"
-line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
+CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')  # Messaging API Channel Access Token
+CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
 
+line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
+handler = WebhookHandler(CHANNEL_SECRET)
 # ===== 全域資料 =====
 
 settings = {"hour": 9, "minute": 0}  # 每日推送時間
@@ -115,6 +121,46 @@ def editstore():
     with open("store.json", "w", encoding="utf-8") as f:
         json.dump(store, f, ensure_ascii=False, indent=4)
     return jsonify({"success": True, "message": "資料已儲存"})
+#================LINE WEBHOOK=====================
+@app.route("/callback", methods=['POST'])
+def callback():
+    signature = request.headers['X-Line-Signature']
+    body = request.get_data(as_text=True)
+
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        abort(400)
+
+    return 'OK'
+
+
+# ====== 使用者加好友事件 (FollowEvent) ======
+# @handler.add(FollowEvent)
+# def handle_follow(event):
+#     user_id = event.source.user_id
+#     print("新加入的使用者 ID:", user_id)
+
+#     # 可以回覆一則歡迎訊息
+#     line_bot_api.reply_message(
+#         event.reply_token,
+#         TextSendMessage(text=f"歡迎加入！你的ID是 {user_id}")
+#     )
+
+
+# ====== 使用者傳訊息事件 ======
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    user_id = event.source.user_id
+    user_text = event.message.text
+
+    print(f"收到來自 {user_id} 的訊息: {user_text}")
+
+    # 回覆訊息
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=f"你傳了: {user_text}\n你的ID是: {user_id}")
+    )
 
 # 時間設定
 @app.route("/set_time", methods=["POST"])
@@ -127,27 +173,27 @@ def set_time():
 
 
 
-# ===== LINE 推送功能 =====
-def push_excel_link():
-    for uid, roles in permissions.items():
-        for role in roles:
-            file_name = f"{role}_report.xlsx"
-            file_url = f"http://your-public-ip:5000/files/{file_name}"  # 需要改成你 public IP 或 ngrok
-            try:
-                line_bot_api.push_message(uid, TextSendMessage(text=f"您的檔案下載連結：{file_url}"))
-            except Exception as e:
-                print(f"推送失敗 {uid}: {e}")
+# # ===== LINE 推送功能 =====
+# def push_excel_link():
+#     for uid, roles in permissions.items():
+#         for role in roles:
+#             file_name = f"{role}_report.xlsx"
+#             file_url = f"http://your-public-ip:5000/files/{file_name}"  # 需要改成你 public IP 或 ngrok
+#             try:
+#                 line_bot_api.push_message(uid, TextSendMessage(text=f"您的檔案下載連結：{file_url}"))
+#             except Exception as e:
+#                 print(f"推送失敗 {uid}: {e}")
 
-# ===== APScheduler 排程 =====
-scheduler = BackgroundScheduler()
-scheduler.add_job(
-    push_excel_link,
-    'cron',
-    hour=settings["hour"],
-    minute=settings["minute"]
-)
-scheduler.start()
+# # ===== APScheduler 排程 =====
+# scheduler = BackgroundScheduler()
+# scheduler.add_job(
+#     push_excel_link,
+#     'cron',
+#     hour=settings["hour"],
+#     minute=settings["minute"]
+# )
+# scheduler.start()
 
 # ===== Flask 啟動 =====
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=8018)
