@@ -152,7 +152,6 @@ def callback():
 def send_excel_button(user_id, file_name):
     file_url = f"https://cf23fc37feab.ngrok-free.app/files/{file_name}"
 
-    # FlexMessage 必須至少有 body，並且 type="bubble"
     flex_content = {
         "type": "bubble",
         "body": {
@@ -161,11 +160,17 @@ def send_excel_button(user_id, file_name):
             "spacing": "md",
             "contents": [
                 {
+                    "type": "text",
+                    "text": f"點擊按鈕下載 {file_name}",
+                    "weight": "bold",
+                    "size": "md"
+                },
+                {
                     "type": "button",
                     "style": "primary",
                     "action": {
                         "type": "uri",
-                        "label": f"下載 {file_name}",
+                        "label": "下載檔案",
                         "uri": file_url
                     }
                 }
@@ -180,7 +185,7 @@ def send_excel_button(user_id, file_name):
 
     request_body = PushMessageRequest(
         to=user_id,
-        messages=[flex_message]  # 必須是 list
+        messages=[flex_message]
     )
 
     line_bot_api.push_message(request_body)
