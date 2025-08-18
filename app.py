@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify,send_from_directory
 import json
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
@@ -18,7 +18,8 @@ app = Flask(__name__)
 # ===== LINE 設定 =====
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')  # Messaging API Channel Access Token
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
-
+TEMP='temp'
+app.config['TEMP'] = TEMP
 line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 # ===== 全域資料 =====
@@ -122,6 +123,10 @@ def editstore():
     with open("store.json", "w", encoding="utf-8") as f:
         json.dump(store, f, ensure_ascii=False, indent=4)
     return jsonify({"success": True, "message": "資料已儲存"})
+@app.route("/files/<path:filename>")
+def serve_file(filename):
+    return send_from_directory(app.config['TEMP'], filename, as_attachment=True)
+
 #================LINE WEBHOOK=====================
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -135,7 +140,11 @@ def callback():
 
     return 'OK'
 
-
+# 發送檔案下載連結
+def send_excel_link(user_id, file_name):
+    # 假設 Flask 跑在 localhost:5000
+    file_url = f"https://cf23fc37feab.ngrok-free.app/files/{file_name}"
+    line_bot_api.push_message(user_id, TextSendMessage(text=f"您的檔案下載連結：{file_url}"))
 # ====== 使用者加好友事件 (FollowEvent) ======
 # @handler.add(FollowEvent)
 # def handle_follow(event):
@@ -158,15 +167,20 @@ def handle_message(event):
     print(f"收到來自 {user_id} 的訊息: {user_text}")
     if user_text[:2] == "工號":
         rest = user_text[2:]          # 取 "工號" 後面的字
-        print(rest)
+
         if rest[0].lower() == "a" or rest[0].lower() == "A":
             result = rest
-            print(result)
-        # 回覆訊息
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=f"您的工號是: {result}\n你的ID是: {user_id}")
-        )
+            # 回覆訊息
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"您的工號是: {result}\n你的ID是: {user_id}")
+            )
+    elif user_text=='Data':
+        send_excel_link('Ue8115fd6e2a0ffb3170fa8a0949ce4b9','testdata.xlsx')
+        
+
+
+
 
 # 時間設定
 @app.route("/set_time", methods=["POST"])
