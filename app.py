@@ -1,13 +1,12 @@
-from flask import Flask, render_template, request, jsonify,send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, abort
 import json
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
-from linebot import LineBotApi
-from linebot.models import TextSendMessage
-from flask import Flask, request, abort
+
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, FileMessage
+from linebot.v3.messaging import MessagingApi
 from dotenv import load_dotenv
 import os
 ENV = './.env' 
@@ -24,6 +23,8 @@ app.config['TEMP'] = TEMP
 app.config['PNG'] = PNG
 line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
+messaging_api = MessagingApi(channel_access_token=CHANNEL_ACCESS_TOKEN)  # v3 SDK
+
 # ===== 全域資料 =====
 
 settings = {"hour": 9, "minute": 0}  # 每日推送時間
@@ -155,8 +156,9 @@ def send_excel_link(user_id, file_name):
         preview_image_url="https://cf23fc37feab.ngrok-free.app/png/logo.png",
         file_size = os.path.getsize(os.path.join(app.config['TEMP'], file_name))  # 這裡填檔案大小（bytes），可用 os.path.getsize() 自動取得
     )
-   # line_bot_api.push_message(user_id, TextSendMessage(text=f"您的檔案下載連結：{file_url}"))
-    line_bot_api.push_message(user_id, file_message)
+
+    messaging_api.push_message(to=user_id, messages=[file_message])
+    # line_bot_api.push_message(user_id, TextSendMessage(text=f"您的檔案下載連結：{file_url}"))
 # ====== 使用者加好友事件 (FollowEvent) ======
 # @handler.add(FollowEvent)
 # def handle_follow(event):
