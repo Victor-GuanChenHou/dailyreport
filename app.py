@@ -18,7 +18,7 @@ app = Flask(__name__)
 # ===== LINE 設定 =====
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')  # Messaging API Channel Access Token
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
-TEMP='temp'
+TEMP='/home/kingzaeip1/dailyreport/temp'
 app.config['TEMP'] = TEMP
 line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
