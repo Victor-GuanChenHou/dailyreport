@@ -152,6 +152,7 @@ def callback():
 def send_excel_button(user_id, file_name):
     file_url = f"https://cf23fc37feab.ngrok-free.app/files/{file_name}"
 
+    # FlexMessage 必須至少有 body，並且 type="bubble"
     flex_content = {
         "type": "bubble",
         "body": {
@@ -179,10 +180,10 @@ def send_excel_button(user_id, file_name):
 
     request_body = PushMessageRequest(
         to=user_id,
-        messages=[flex_message]  # 一定要放在 list 裡面
+        messages=[flex_message]  # 必須是 list
     )
 
-    line_bot_api.push_message(request_body)  # 直接傳 PushMessageRequest
+    line_bot_api.push_message(request_body)
 # ====== 使用者加好友事件 (FollowEvent) ======
 # @handler.add(FollowEvent)
 # def handle_follow(event):
