@@ -20,10 +20,11 @@
     </div>
     <table id="emailTable" style="width: 95%; margin: auto;">
         <colgroup>
-            <col style="width: 15%;">
-            <col style="width: 15%;">
+            <col style="width: 9%;">
+            <col style="width: 10%;">
             <col style="width: 45%;">
-            <col style="width: 21%;">
+            <col style="width: 18%;">
+            <col style="width: 14%;">
             <col style="width: 4%;">
         </colgroup>
         <thead>
@@ -32,6 +33,7 @@
                 <th>使用者名稱</th>
                 <th>部門</th>
                 <th>電子郵件</th>
+                <th>LINEID</th>
                 <th>操作</th>
             </tr>
         </thead>
@@ -42,7 +44,8 @@
                     <td>{{ item.user_id }}</td>
                     <td>{{ item.name }}</td>
                     <td>{{ item.departments | join(', ') }}</td>      
-                    <td>{{ item.email }}</td>           
+                    <td>{{ item.email }}</td> 
+                    <td>{{ item.LINE }}</td>                 
                     <td>
                         <div class="editdeletdropdown" style="position: relative;">
                             <img src="/static/img/edit.png" alt="操作" class="editdeletdropdown-btn"
@@ -56,6 +59,7 @@
                                         data-name="{{ item.name }}"
                                         data-departments="{{ item.departments | join(', ') }}"
                                         data-email="{{ item.email }}"
+                                        data-LINE="{{ item.LINE }}"
                                         onclick="openEditModal(this)"  
                                         style="display:block; width:100%; padding:8px; border:none; background:none; text-align:left;">
                                     修改
@@ -306,8 +310,10 @@
     <input type="text" id="editUser" placeholder="輸入 使用者代號" disabled>
 
     <label for="editName">使用者名稱：</label>
-    <input type="text" id="editName" placeholder="輸入 使用者名稱：">
+    <input type="text" id="editName" placeholder="輸入 使用者名稱">
 
+    <label for="editLINE">LINEUSID</label>
+    <input type="text" id="editLINE" placeholder="輸入 LINEUSID：">
     <div class="editmodal-actions">
       <button onclick="saveedit()">儲存</button>
       <button onclick="closeEditModal()">取消</button>
@@ -395,13 +401,14 @@
         const email = btn.dataset.email || "";
         const user = btn.dataset.user_id || "";
         const name = btn.dataset.name || "";
+        const LINE = btn.dataset.line  || "";
         const departments = (btn.dataset.departments || "").split(",").map(d => d.trim()).filter(d => d);
 
         // 填入文字欄位
         document.getElementById("editEmail").value = email;
         document.getElementById("editUser").value = user;
         document.getElementById("editName").value = name;
-
+        document.getElementById("editLINE").value = LINE;
         // 填入多選門市 / 部門
         const editStore = $('#editStore');
         editStore.val(departments).trigger('change'); // 更新 Select2
@@ -422,7 +429,7 @@
         document.getElementById("editEmail").value = "";
         document.getElementById("editUser").value = "";
         document.getElementById("editName").value = "";
-
+        document.getElementById("editLINE").value = "";
     }
 
 
@@ -431,7 +438,7 @@
         const editEmail = document.getElementById("editEmail").value.trim();
         const editUser = document.getElementById("editUser").value.trim();
         const editName = document.getElementById("editName").value.trim();
-
+        const editLINE = document.getElementById("editLINE").value.trim();
         // 取 hidden ori_Store（JSON 轉陣列）
         const ori_Email = document.getElementById("ori_Email").value.trim();
         const ori_User = document.getElementById("ori_User").value.trim();
@@ -447,7 +454,7 @@
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ editStore, editEmail,editUser,editName,ori_Email,ori_Name})
+            body: JSON.stringify({ editStore, editEmail,editUser,editName,editLINE,ori_Email,ori_Name})
         })
         .then(response => response.json())
         .then(data => {
@@ -495,6 +502,8 @@
     <label for="name">使用者名稱：</label>
     <input type="text" id="name" placeholder="輸入 使用者名稱：">
 
+    <label for="LINE">LINEUSID：</label>
+    <input type="text" id="LINE" placeholder="輸入 LINEUSID：">
     <div class="modal-actions">
       <button onclick="saveEntry()">儲存</button>
       <button onclick="closeModal()">取消</button>
@@ -633,7 +642,7 @@
         document.getElementById("storeEmail").value = "";
         document.getElementById("user").value = "";
         document.getElementById("name").value = "";
-
+        document.getElementById("LINE").value = "";
         
     }
 
@@ -642,6 +651,7 @@
         const email = document.getElementById("storeEmail").value.trim();
         const user = document.getElementById("user").value.trim();
         const name = document.getElementById("name").value.trim();
+        const LINE = document.getElementById("LINE").value.trim();
         if (!storeValues || !email || !user || !name) {
             alert("請完整填寫資料！");
             return;
@@ -653,7 +663,7 @@
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ storeValues, email, user ,name})
+            body: JSON.stringify({ storeValues, email, user ,name,LINE})
         })
         .then(response => response.json())
         .then(data => {
@@ -666,6 +676,7 @@
                     <td>${name}</td>
                     <td>${storeValues.join(", ")}</td>
                     <td>${email}</td>
+                    <td>${LINE}</td>
                 `;
                 table.appendChild(newRow);
 

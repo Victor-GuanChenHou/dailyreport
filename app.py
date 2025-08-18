@@ -57,6 +57,7 @@ def edituser():
             per['name']=data['editName']
             per['departments']=data['editStore']
             per['email']=data['editEmail']
+            per['LINE']=data['editLINE']
             break
     with open("permissions.json", "w", encoding="utf-8") as f:
         json.dump(permissions, f, ensure_ascii=False, indent=4)
@@ -155,12 +156,15 @@ def handle_message(event):
     user_text = event.message.text
 
     print(f"收到來自 {user_id} 的訊息: {user_text}")
-
-    # 回覆訊息
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=f"你傳了: {user_text}\n你的ID是: {user_id}")
-    )
+    if user_id[:2] == "工號":
+        rest = user_id[2:]          # 取 "工號" 後面的字
+        if rest[0].lower() == "a":
+            result = rest
+        # 回覆訊息
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=f"您的工號是: {result}\n你的ID是: {user_id}")
+        )
 
 # 時間設定
 @app.route("/set_time", methods=["POST"])
