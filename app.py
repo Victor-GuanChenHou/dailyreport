@@ -186,9 +186,11 @@ def handle_message(event):
         if rest[0].lower() == "a" or rest[0].lower() == "A":
             result = rest
             # 回覆訊息
-            line_bot_api.reply_message(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=f"您的工號是: {result}\n你的ID是: {user_id}")]
+            line_bot_api.reply_message_with_http_info(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=f"您的工號是: {result}\n你的ID是: {user_id}")]
+                    )
             )
     elif user_text=='Data':
         send_excel_link('Ue8115fd6e2a0ffb3170fa8a0949ce4b9','testdata.xlsx')
