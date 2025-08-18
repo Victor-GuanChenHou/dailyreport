@@ -7,7 +7,7 @@ from linebot.models import TextSendMessage
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, FollowEvent
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, FileSendMessage
 from dotenv import load_dotenv
 import os
 ENV = './.env' 
@@ -144,7 +144,13 @@ def callback():
 def send_excel_link(user_id, file_name):
     # 假設 Flask 跑在 localhost:5000
     file_url = f"https://cf23fc37feab.ngrok-free.app/files/{file_name}"
-    line_bot_api.push_message(user_id, TextSendMessage(text=f"您的檔案下載連結：{file_url}"))
+    file_message = FileSendMessage(
+        original_content_url=file_url,  # 檔案實際 URL
+        file_name=file_name,
+        file_size = os.path.getsize(os.path.join(app.config['TEMP'], file_name))  # 這裡填檔案大小（bytes），可用 os.path.getsize() 自動取得
+    )
+   # line_bot_api.push_message(user_id, TextSendMessage(text=f"您的檔案下載連結：{file_url}"))
+    line_bot_api.push_message(user_id, file_message)
 # ====== 使用者加好友事件 (FollowEvent) ======
 # @handler.add(FollowEvent)
 # def handle_follow(event):
