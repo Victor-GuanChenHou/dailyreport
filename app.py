@@ -156,8 +156,8 @@ def handle_message(event):
     user_text = event.message.text
 
     print(f"收到來自 {user_id} 的訊息: {user_text}")
-    if user_id[:2] == "ID":
-        rest = user_id[2:]          # 取 "工號" 後面的字
+    if user_text[:2] == "工號":
+        rest = user_text[2:]          # 取 "工號" 後面的字
         print(rest)
         if rest[0].lower() == "a" or rest[0].lower() == "A":
             result = rest
