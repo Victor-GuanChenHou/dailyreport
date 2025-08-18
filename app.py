@@ -8,7 +8,7 @@ from linebot.v3 import (WebhookHandler)
 from linebot.v3.exceptions import (InvalidSignatureError)
 from linebot.v3.messaging import (Configuration, ApiClient,MessagingApi,ReplyMessageRequest,TextMessage)
 from linebot.v3.webhooks import (MessageEvent,TextMessageContent)
-from linebot.v3.messaging.models import FlexMessage
+from linebot.v3.messaging.models import FlexMessage,PushMessageRequest
 from dotenv import load_dotenv
 import os
 ENV = './.env' 
@@ -150,7 +150,7 @@ def callback():
 
 # 發送檔案下載連結
 def send_excel_button(user_id, file_name):
-    file_url = f"https://cf23fc37feab.ngrok-free.app/files/{file_name}"  # 你的公開下載 URL
+    file_url = f"https://cf23fc37feab.ngrok-free.app/files/{file_name}"
 
     flex_content = {
         "type": "bubble",
@@ -177,7 +177,12 @@ def send_excel_button(user_id, file_name):
         contents=flex_content
     )
 
-    line_bot_api.push_message(user_id, flex_message)
+    request_body = PushMessageRequest(
+        to=user_id,
+        messages=[flex_message]  # 一定要放在 list 裡面
+    )
+
+    line_bot_api.push_message(request_body)  # 直接傳 PushMessageRequest
 # ====== 使用者加好友事件 (FollowEvent) ======
 # @handler.add(FollowEvent)
 # def handle_follow(event):
