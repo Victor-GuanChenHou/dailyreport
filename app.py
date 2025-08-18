@@ -8,7 +8,15 @@ from linebot.v3 import (WebhookHandler)
 from linebot.v3.exceptions import (InvalidSignatureError)
 from linebot.v3.messaging import (Configuration, ApiClient,MessagingApi,ReplyMessageRequest,TextMessage)
 from linebot.v3.webhooks import (MessageEvent,TextMessageContent)
-from linebot.v3.messaging.models import FlexMessage,PushMessageRequest
+from linebot.v3.messaging.models import (
+    FlexMessage,
+    PushMessageRequest,
+    TemplateMessage,
+    ButtonsTemplate,
+    PostbackAction,
+    MessageAction,
+    URIAction
+)
 from dotenv import load_dotenv
 import os
 ENV = './.env' 
@@ -152,43 +160,27 @@ def callback():
 def send_excel_button(user_id, file_name):
     file_url = f"https://cf23fc37feab.ngrok-free.app/files/{file_name}"
 
-    flex_content = {
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "md",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": f"點擊按鈕下載 {file_name}",
-                    "weight": "bold",
-                    "size": "md"
-                },
-                {
-                    "type": "button",
-                    "style": "primary",
-                    "action": {
-                        "type": "uri",
-                        "label": "下載檔案",
-                        "uri": file_url
-                    }
-                }
-            ]
-        }
-    }
-
-    flex_message = FlexMessage(
-        alt_text=f"下載 {file_name}",
-        contents=flex_content
+    buttons_template = ButtonsTemplate(
+        thumbnail_image_url="https://steam.oxxostudio.tw/download/python/line-template-message-demo.jpg",
+        title="OXXO.STUDIO",
+        text="這是按鈕樣板",
+        actions=[
+            PostbackAction(label="postback", data="發送 postback"),
+            MessageAction(label="說 hello", text="hello"),
+            URIAction(label="前往 STEAM 教育學習網", uri="https://steam.oxxostudio.tw"),
+        ]
     )
-
-    request_body = PushMessageRequest(
-        to=user_id,
-        messages=[flex_message]
+    message = TemplateMessage(
+        alt_text="ButtonsTemplate",
+        template=buttons_template
     )
-
-    line_bot_api.push_message(request_body)
+    line_bot_api.push_message(
+        PushMessageRequest(
+            to=user_id,
+            messages=[message]
+        )
+    )
+    line_bot_api.push_message(line_bot_api)
 # ====== 使用者加好友事件 (FollowEvent) ======
 # @handler.add(FollowEvent)
 # def handle_follow(event):
