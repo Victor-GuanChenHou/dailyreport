@@ -179,7 +179,7 @@ def callback():
 def send_excel_button(user_id, file_name):
     with open("settings.json", "r", encoding="utf-8") as f:
         setting = json.load(f)
-    setting = settings[0]
+    setting = setting[0]
     file_url = f"https://{setting['ngrokid']}/files/{file_name}"
 
     buttons_template = ButtonsTemplate(
