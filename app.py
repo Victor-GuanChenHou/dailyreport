@@ -358,9 +358,10 @@ def editsetting():
     with open("settings.json", "w", encoding="utf-8") as f:
         json.dump(setting, f, ensure_ascii=False, indent=4)
     return jsonify({"success": True, "message": "資料已儲存"})
-@app.route("/files/<path:filename>")
-def serve_file(filename):
-    return send_from_directory(app.config['TEMP'], filename, as_attachment=True)
+@app.route("/files/<user_id>/<path:filename>")
+def serve_file(user_id,filename):
+    folder_path = os.path.join(app.config['FOLDER'], user_id)
+    return send_from_directory(folder_path, filename, as_attachment=True)
 @app.route("/png/<path:filename>")
 def png_file(filename):
     return send_from_directory(app.config['PNG'], filename, as_attachment=True)
