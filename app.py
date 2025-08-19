@@ -177,7 +177,7 @@ def callback():
 
 # 發送檔案下載連結
 def send_excel_button(user_id, file_name):
-    with open("setting.json", "r", encoding="utf-8") as f:
+    with open("settings.json", "r", encoding="utf-8") as f:
         setting = json.load(f)
     file_url = f"https://{setting['ngrokid']}/files/{file_name}"
 
