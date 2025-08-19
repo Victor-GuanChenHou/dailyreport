@@ -388,8 +388,8 @@ def send_excel_button(user_id, file_name):
         permission = json.load(f)
     for per in permission:
         if per['LINE']==user_id:
-            userdata=per
-    file_url = f"https://{setting['ngrokid']}/files/{userdata}/{file_name}"
+            ID=per['user_id']
+    file_url = f"https://{setting['ngrokid']}/files/{ID}/{file_name}"
     buttons_template = ButtonsTemplate(
         thumbnail_image_url=f"https://{setting['ngrokid']}/png/logo.png",
         title="日報表",
