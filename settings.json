@@ -1,4 +1,7 @@
-{
-  "hour": 9,
-  "minute": 0
-}
+[
+    {
+        "hour": "9",
+        "minute": "0",
+        "ngrokid": "4e7f14be6269.ngrok-free.app"
+    }
+]

@@ -137,6 +137,25 @@ def editstore():
     with open("store.json", "w", encoding="utf-8") as f:
         json.dump(store, f, ensure_ascii=False, indent=4)
     return jsonify({"success": True, "message": "資料已儲存"})
+@app.route("/setting")
+def setting():
+    with open("settings.json", "r", encoding="utf-8") as f:
+        setting = json.load(f)
+    return render_template("setting.html",setting=setting,settings=settings)
+@app.route("/editsetting", methods=['POST'])
+def editsetting():
+    with open("settings.json", "r", encoding="utf-8") as f:
+        setting = json.load(f)
+    data = request.get_json()
+    print(data)
+    for per in setting:
+        per['hour']=data['hour']
+        per['minute']=data['minute']
+        per['ngrokid']=data['ngrokid']
+        break
+    with open("settings.json", "w", encoding="utf-8") as f:
+        json.dump(setting, f, ensure_ascii=False, indent=4)
+    return jsonify({"success": True, "message": "資料已儲存"})
 @app.route("/files/<path:filename>")
 def serve_file(filename):
     return send_from_directory(app.config['TEMP'], filename, as_attachment=True)
@@ -158,10 +177,12 @@ def callback():
 
 # 發送檔案下載連結
 def send_excel_button(user_id, file_name):
-    file_url = f"https://cf23fc37feab.ngrok-free.app/files/{file_name}"
+    with open("setting.json", "r", encoding="utf-8") as f:
+        setting = json.load(f)
+    file_url = f"https://{setting['ngrokid']}/files/{file_name}"
 
     buttons_template = ButtonsTemplate(
-        thumbnail_image_url="https://cf23fc37feab.ngrok-free.app/png/logo.png",
+        thumbnail_image_url=f"https://{setting['ngrokid']}/png/logo.png",
         title="日報表",
         text="2025-08-18",
         actions=[
