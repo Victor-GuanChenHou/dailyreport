@@ -51,7 +51,7 @@ def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料ex
     for per in permission:
         if per['user_id']==user_id:
             userdata=per
-    user_folder = os.path.join(app.config['FOLDER'], userdata['LINE'])
+    user_folder = os.path.join(app.config['FOLDER'], user_id)
     if not os.path.exists(user_folder):
         os.makedirs(user_folder)
     end_date = datetime.strptime(day, "%Y-%m-%d")
@@ -383,8 +383,13 @@ def send_excel_button(user_id, file_name):
     with open("settings.json", "r", encoding="utf-8") as f:
         setting = json.load(f)
     setting = setting[0]
-    file_url = f"https://{setting['ngrokid']}/files/{user_id}/{file_name}"
-
+    
+    with open("permissions.json", "r", encoding="utf-8") as f:
+        permission = json.load(f)
+    for per in permission:
+        if per['LINE']==user_id:
+            userdata=per
+    file_url = f"https://{setting['ngrokid']}/files/{userdata}/{file_name}"
     buttons_template = ButtonsTemplate(
         thumbnail_image_url=f"https://{setting['ngrokid']}/png/logo.png",
         title="日報表",
