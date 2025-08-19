@@ -2,7 +2,9 @@ from flask import Flask, render_template, request, jsonify,send_from_directory
 import json
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
-
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
 from flask import Flask, request, abort
 from linebot.v3 import (WebhookHandler)
 from linebot.v3.exceptions import (InvalidSignatureError)
@@ -27,10 +29,13 @@ app = Flask(__name__)
 # ===== LINE 設定 =====
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')  # Messaging API Channel Access Token
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
+
 TEMP='/home/kingzaeip1/dailyreport/temp'
 PNG='/home/kingzaeip1/dailyreport/static/img'
+FOLDER='static/file'
 app.config['TEMP'] = TEMP
 app.config['PNG'] = PNG
+app.config['FOLDER'] = FOLDER
 configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 api_client = ApiClient(configuration)
@@ -40,6 +45,201 @@ line_bot_api = MessagingApi(api_client)
 
 settings = {"hour": 9, "minute": 0}  # 每日推送時間
 
+def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料excel期始位置
+    with open("permissions.json", "r", encoding="utf-8") as f:
+        permission = json.load(f)
+    for per in permission:
+        if per['user_id']==user_id:
+            userdata=per
+    user_folder = os.path.join(app.config['FOLDER'], userdata['LINE'])
+    if not os.path.exists(user_folder):
+        os.makedirs(user_folder)
+    end_date = datetime.strptime(day, "%Y-%m-%d")
+    month = end_date.month
+    dataday = end_date.day
+    date_range_str = f"{month}/1 ~ {month}/{dataday}"
+    ytd_range_str=f"1/1 ~ {month}/{dataday}"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f"{day}Daily Report"
+
+    # 日期 & 店數
+    ws.merge_cells("A1:B1")
+    ws["A1"] = day
+    ws["A1"].alignment = Alignment(horizontal="center")
+    ws["A2"] = "店數"
+    ws["B2"] = len(data)-2
+    # 標題顏色
+    sales_fill = PatternFill("solid", fgColor="800000")   # 暗紅
+    tc_fill = PatternFill("solid", fgColor="006666")      # 藍綠
+    ta_fill = PatternFill("solid", fgColor="660066")      # 紫色
+    header_font = Font(bold=True, color="FFFFFF")
+    # 寫 Daily Sales 標題
+    ws.merge_cells(f"C{start}:E{start}")
+    ws[f"C{start}"] = "Daily Sales"
+    ws[f"C{start}"].fill = sales_fill
+    ws[f"C{start}"].font = header_font
+    ws[f"C{start}"].alignment = Alignment(horizontal="center")
+    ws[f"C{start+1}"], ws[f"D{start+1}"], ws[f"E{start+1}"] = "CY", "PY", "Index"
+    for col in ["C", "D", "E"]:
+        ws[f"{col}{start+1}"].fill = sales_fill
+        ws[f"{col}{start+1}"].font = header_font
+        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+    # 寫 Daily TC 標題
+    ws.merge_cells(f"F{start}:H{start}")
+    ws[f"F{start}"] = "Daily TC"
+    ws[f"F{start}"].fill = tc_fill
+    ws[f"F{start}"].font = header_font
+    ws[f"F{start}"].alignment = Alignment(horizontal="center")
+
+    ws[f"F{start+1}"], ws[f"G{start+1}"], ws[f"H{start+1}"] = "CY", "PY", "Index"
+    for col in ["F", "G", "H"]:
+        ws[f"{col}{start+1}"].fill = tc_fill
+        ws[f"{col}{start+1}"].font = header_font
+        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+
+    # 寫 Daily TA 標題
+    ws.merge_cells(f"I{start}:K{start}")
+    ws[f"I{start}"] = "Daily TA"
+    ws[f"I{start}"].fill = ta_fill
+    ws[f"I{start}"].font = header_font
+    ws[f"I{start}"].alignment = Alignment(horizontal="center")
+
+    ws[f"I{start+1}"], ws[f"J{start+1}"], ws[f"K{start+1}"] = "CY", "PY", "Index"
+    for col in ["I", "J", "K"]:
+        ws[f"{col}{start+1}"].fill = ta_fill
+        ws[f"{col}{start+1}"].font = header_font
+        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+    # 寫 MTD Sales 標題
+    ws.merge_cells(f"L{start}:N{start}")
+    ws[f"L{start}"] = f"MTD Sales({date_range_str})"
+    ws[f"L{start}"].fill = sales_fill
+    ws[f"L{start}"].font = header_font
+    ws[f"L{start}"].alignment = Alignment(horizontal="center")
+    ws[f"L{start+1}"], ws[f"M{start+1}"], ws[f"N{start+1}"] = "CY", "PY", "Index"
+    for col in ["L", "M", "N"]:
+        ws[f"{col}{start+1}"].fill = sales_fill
+        ws[f"{col}{start+1}"].font = header_font
+        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+    # 寫 MTD TC Sales 標題
+    ws.merge_cells(f"O{start}:Q{start}")
+    ws[f"O{start}"] = f"MTD TC Sales({date_range_str})"
+    ws[f"O{start}"].fill = tc_fill
+    ws[f"O{start}"].font = header_font
+    ws[f"O{start}"].alignment = Alignment(horizontal="center")
+    ws[f"O{start+1}"], ws[f"P{start+1}"], ws[f"Q{start+1}"] = "CY", "PY", "Index"
+    for col in ["O", "P", "Q"]:
+        ws[f"{col}{start+1}"].fill = tc_fill
+        ws[f"{col}{start+1}"].font = header_font
+        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+    # 寫 MTD TA Sales 標題
+    ws.merge_cells(f"R{start}:T{start}")
+    ws[f"R{start}"] = f"MTD TA Sales({date_range_str})"
+    ws[f"R{start}"].fill = ta_fill
+    ws[f"R{start}"].font = header_font
+    ws[f"R{start}"].alignment = Alignment(horizontal="center")
+    ws[f"R{start+1}"], ws[f"S{start+1}"], ws[f"T{start+1}"] = "CY", "PY", "Index"
+    for col in ["R", "S", "T"]:
+        ws[f"{col}{start+1}"].fill = ta_fill
+        ws[f"{col}{start+1}"].font = header_font
+        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+     # 寫 YTD Sales 標題
+    ws.merge_cells(f"U{start}:W{start}")
+    ws[f"U{start}"] = f"YTD Sales({ytd_range_str})"
+    ws[f"U{start}"].fill = sales_fill
+    ws[f"U{start}"].font = header_font
+    ws[f"U{start}"].alignment = Alignment(horizontal="center")
+    ws[f"U{start+1}"], ws[f"V{start+1}"], ws[f"W{start+1}"] = "CY", "PY", "Index"
+    for col in ["U", "V", "W"]:
+        ws[f"{col}{start+1}"].fill = sales_fill
+        ws[f"{col}{start+1}"].font = header_font
+        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+    # 寫 YTD TC Sales 標題
+    ws.merge_cells(f"X{start}:Z{start}")
+    ws[f"X{start}"] = f"YTD TC Sales({ytd_range_str})"
+    ws[f"X{start}"].fill = tc_fill
+    ws[f"X{start}"].font = header_font
+    ws[f"X{start}"].alignment = Alignment(horizontal="center")
+    ws[f"X{start+1}"], ws[f"P{start+1}"], ws[f"Q{start+1}"] = "CY", "PY", "Index"
+    for col in ["X", "Y", "Z"]:
+        ws[f"{col}{start+1}"].fill = tc_fill
+        ws[f"{col}{start+1}"].font = header_font
+        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+    # 寫 YTD TA Sales 標題
+    ws.merge_cells(f"AA{start}:AC{start}")
+    ws[f"AA{start}"] = f"YTD TA Sales({ytd_range_str})"
+    ws[f"AA{start}"].fill = ta_fill
+    ws[f"AA{start}"].font = header_font
+    ws[f"AA{start}"].alignment = Alignment(horizontal="center")
+    ws[f"AA{start+1}"], ws[f"AB{start+1}"], ws[f"AC{start+1}"] = "CY", "PY", "Index"
+    for col in ["AA", "AB", "AC"]:
+        ws[f"{col}{start+1}"].fill = ta_fill
+        ws[f"{col}{start+1}"].font = header_font
+        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+    row=start+2
+    for r in data:
+        ws[f"A{row}"] = r[0]
+        ws[f"B{row}"] = r[1]
+        ws[f"C{row}"] = r[2]
+        ws[f"C{row}"].number_format = "#,##0"
+        ws[f"D{row}"] = r[3]
+        ws[f"D{row}"].number_format = "#,##0"
+        ws[f"E{row}"] = r[4]
+        ws[f"E{row}"].number_format = "#,##0"
+        ws[f"F{row}"] = r[5]
+        ws[f"F{row}"].number_format = "#,##0"
+        ws[f"G{row}"] = r[6]
+        ws[f"G{row}"].number_format = "#,##0"
+        ws[f"H{row}"] = r[7]
+        ws[f"H{row}"].number_format = "#,##0"
+        ws[f"I{row}"] = r[8]
+        ws[f"I{row}"].number_format = "#,##0"
+        ws[f"J{row}"] = r[9]
+        ws[f"J{row}"].number_format = "#,##0"
+        ws[f"K{row}"] = r[10]
+        ws[f"K{row}"].number_format = "#,##0"
+        ws[f"L{row}"] = r[11]
+        ws[f"L{row}"].number_format = "#,##0"
+        ws[f"M{row}"] = r[12]
+        ws[f"M{row}"].number_format = "#,##0"
+        ws[f"N{row}"] = r[13]
+        ws[f"N{row}"].number_format = "#,##0"
+        ws[f"O{row}"] = r[14]
+        ws[f"O{row}"].number_format = "#,##0"
+        ws[f"P{row}"] = r[15]
+        ws[f"P{row}"].number_format = "#,##0"
+        ws[f"Q{row}"] = r[16]
+        ws[f"Q{row}"].number_format = "#,##0"
+        ws[f"R{row}"] = r[17]
+        ws[f"R{row}"].number_format = "#,##0"
+        ws[f"S{row}"] = r[18]
+        ws[f"S{row}"].number_format = "#,##0"
+        ws[f"T{row}"] = r[19]
+        ws[f"T{row}"].number_format = "#,##0"
+        ws[f"U{row}"] = r[20]
+        ws[f"U{row}"].number_format = "#,##0"
+        ws[f"V{row}"] = r[21]
+        ws[f"V{row}"].number_format = "#,##0"
+        ws[f"W{row}"] = r[22]
+        ws[f"W{row}"].number_format = "#,##0"
+        ws[f"X{row}"] = r[23]
+        ws[f"X{row}"].number_format = "#,##0"
+        ws[f"Y{row}"] = r[24]
+        ws[f"Y{row}"].number_format = "#,##0"
+        ws[f"Z{row}"] = r[25]
+        ws[f"Z{row}"].number_format = "#,##0"
+        ws[f"AA{row}"] = r[26]
+        ws[f"AA{row}"].number_format = "#,##0"
+        ws[f"AB{row}"] = r[27]
+        ws[f"AB{row}"].number_format = "#,##0"
+        ws[f"AC{row}"] = r[28]
+        ws[f"AC{row}"].number_format = "#,##0"
+        row += 1
+
+    # 美化欄寬
+    for col in range(1, 30):
+        ws.column_dimensions[get_column_letter(col)].width = 15
+    wb.save(f"{user_folder}/{day}daily_report.xlsx")
 
 @app.route("/data")
 def index():
@@ -106,7 +306,8 @@ def addstore():
     data = request.get_json()
     store.append({
         "value": data.get("value"),
-        "name": data.get("name")
+        "name": data.get("name"),
+        "dept": data.get("dept")
     })
     with open("store.json", "w", encoding="utf-8") as f:
         json.dump(store, f, ensure_ascii=False, indent=4)
@@ -133,6 +334,7 @@ def editstore():
     for per in store:
         if per['value']==data['value']:
             per['name']=data['name']
+            per['dept']=data['dept']
             break
     with open("store.json", "w", encoding="utf-8") as f:
         json.dump(store, f, ensure_ascii=False, indent=4)
@@ -180,7 +382,7 @@ def send_excel_button(user_id, file_name):
     with open("settings.json", "r", encoding="utf-8") as f:
         setting = json.load(f)
     setting = setting[0]
-    file_url = f"https://{setting['ngrokid']}/files/{file_name}"
+    file_url = f"https://{setting['ngrokid']}/files/{user_id}/{file_name}"
 
     buttons_template = ButtonsTemplate(
         thumbnail_image_url=f"https://{setting['ngrokid']}/png/logo.png",
@@ -234,20 +436,24 @@ def handle_message(event):
                     )
             )
     elif user_text=='Data':
-        send_excel_button('Ue8115fd6e2a0ffb3170fa8a0949ce4b9','testdata.xlsx')
+        data = [
+            ["全品牌", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["Total", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["蘭城新月", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["信義威秀", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["廣三SOGO", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["板橋環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["高雄義大", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["左營環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+        ]
+
+        excelmake("A14176",'2025-08-10',data,5)
+        send_excel_button('Ue8115fd6e2a0ffb3170fa8a0949ce4b9',f'{date}daily_report.xlsx')
         
 
 
 
 
-# 時間設定
-@app.route("/set_time", methods=["POST"])
-def set_time():
-    hour = int(request.form.get("hour"))
-    minute = int(request.form.get("minute"))
-    settings["hour"] = hour
-    settings["minute"] = minute
-    return "更新成功", 200
 
 
 

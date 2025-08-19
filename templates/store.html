@@ -18,8 +18,9 @@
             
         
     </div>
-    <table id="emailTable" style="width: 54%; margin-left:30px">
+    <table id="emailTable" style="width: 74%; margin-left:30px">
         <colgroup>
+            <col style="width: 25%;">
             <col style="width: 25%;">
             <col style="width: 25%;">
             <col style="width: 4%;">
@@ -29,6 +30,7 @@
             <tr>
                 <th>門市代號</th>
                 <th>門市名稱</th>
+                <th>門市主管</th>
                 <th>操作</th>
             </tr>
         </thead>
@@ -38,7 +40,7 @@
                 <tr>
                     <td>{{ item.value }}</td>
                     <td>{{ item.name }}</td>
-                    
+                    <td>{{ item.dept }}</td>
       
                     <td>
                         <div class="editdeletdropdown" style="position: relative;">
@@ -51,6 +53,7 @@
                                 <button class="editBtn"
                                         data-value="{{ item.value }}"
                                         data-name="{{ item.name }}"
+                                        data-dept="{{ item.dept }}"
                                         onclick="openEditModal(this)"  
                                         style="display:block; width:100%; padding:8px; border:none; background:none; text-align:left;">
                                     修改
@@ -58,6 +61,7 @@
                                 <button class="deletbtn"
                                         data-value="{{ item.value }}"
                                         data-name="{{ item.name }}"
+                                        data-dept="{{ item.dept }}"
                                         onclick="opendeletModal(this)"  
                                         style="display:block; width:100%; padding:8px; border:none; background:none; text-align:left;">
                                     刪除
@@ -294,6 +298,8 @@
     <label for="Name">門市名稱：</label>
     <input type="text" id="editName" placeholder="輸入 門市名稱：">
 
+    <label for="dept">門市主管：</label>
+    <input type="text" id="editdept" placeholder="輸入 門市主管：">
     <div class="editmodal-actions">
       <button onclick="saveedit()">儲存</button>
       <button onclick="closeEditModal()">取消</button>
@@ -380,11 +386,11 @@
         // 取得按鈕 data- 屬性資料
         const value = btn.dataset.value || "";
         const name = btn.dataset.name || "";
-  
+        const dept = btn.dataset.dept || "";
         // 填入文字欄位
         document.getElementById("editvalue").value = value;
         document.getElementById("editName").value = name;
-
+        document.getElementById("editdept").value = dept;
 
 
         // 顯示 Modal
@@ -395,6 +401,7 @@
         // 清空欄位
         document.getElementById("editvalue").value = "";
         document.getElementById("editName").value = "";
+        document.getElementById("editdept").value = "";
 
     }
 
@@ -403,7 +410,8 @@
         
         const value = document.getElementById("editvalue").value.trim();
         const name = document.getElementById("editName").value.trim();
-        if (!value || !name ) {
+        const dept = document.getElementById("editdept").value.trim();
+        if (!value || !name||!dept ) {
             alert("請完整填寫門市名稱與 Email！");
             return;
         }
@@ -414,7 +422,7 @@
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ value, name})
+            body: JSON.stringify({ value, name,dept})
         })
         .then(response => response.json())
         .then(data => {
@@ -453,6 +461,8 @@
     <label for="name">門市名稱：</label>
     <input type="text" id="name" placeholder="輸入 門市名稱：">
 
+    <label for="dept">門市主管：</label>
+    <input type="text" id="dept" placeholder="輸入 門市主管：">
     <div class="modal-actions">
       <button onclick="saveEntry()">儲存</button>
       <button onclick="closeModal()">取消</button>
@@ -556,7 +566,7 @@
         // 清空欄位
         document.getElementById("value").value = "";
         document.getElementById("name").value = "";
-
+        document.getElementById("dept").value = "";
         
     }
 
@@ -564,7 +574,8 @@
        
         const value = document.getElementById("value").value.trim();
         const name = document.getElementById("name").value.trim();
-        if (!value || !name ) {
+        const dept = document.getElementById("dept").value.trim();
+        if (!value || !name ||!dept) {
             alert("請完整填寫資料！");
             return;
         }
@@ -575,7 +586,7 @@
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ value,name})
+            body: JSON.stringify({ value,name,dept})
         })
         .then(response => response.json())
         .then(data => {
@@ -586,6 +597,7 @@
                 newRow.innerHTML = `
                     <td>${value}</td>
                     <td>${name}</td>
+                    <td>${dept}</td>
 
                 `;
                 table.appendChild(newRow);
