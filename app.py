@@ -19,7 +19,12 @@ from linebot.v3.messaging.models import (
     MessageAction,
     URIAction
 )
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
 from dotenv import load_dotenv
+import math
 import os
 ENV = './.env' 
 load_dotenv(dotenv_path=ENV)
@@ -30,8 +35,8 @@ app = Flask(__name__)
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')  # Messaging API Channel Access Token
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
 
-TEMP='/home/kingzaeip1/dailyreport/temp'
-PNG='/home/kingzaeip1/dailyreport/static/img'
+TEMP='temp'
+PNG='static/img'
 FOLDER='static/file'
 app.config['TEMP'] = TEMP
 app.config['PNG'] = PNG
@@ -240,7 +245,57 @@ def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料ex
     for col in range(1, 30):
         ws.column_dimensions[get_column_letter(col)].width = 15
     wb.save(f"{user_folder}/{day}daily_report.xlsx")
+def Send_EMAIL(user_id,day):
+    # 郵件內容設定
+    sender_email = os.getenv('MAIL')
+    password = os.getenv('MAIL_PW')
+    with open("permissions.json", "r", encoding="utf-8") as f:
+        permission = json.load(f)
+    for per in permission:
+        if per['user_id']==user_id:
+            email=per['email']
+    receiver_email=email
+    subject = f"{day}日報表"
+    filepath = os.path.join(app.config['FOLDER'], user_id, f"{day}daily_report.xlsx")
 
+
+    # 建立郵件物件
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = receiver_email
+    message["Subject"] = subject
+    # 郵件主體
+    body_html = f"""
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body>
+    <p>附件為{day}日報表再請參考</p>
+    </body>
+    </html>
+    """
+    message.attach(MIMEText(body_html, "html"))
+
+    # 加入 Excel 附件
+    if os.path.exists(filepath):
+        with open(filepath, "rb") as f:
+            part = MIMEApplication(f.read(), Name=os.path.basename(filepath))
+        part['Content-Disposition'] = f'attachment; filename="{os.path.basename(filepath)}"'
+        message.attach(part)
+    else:
+        print(f"警告：檔案不存在 -> {filepath}")
+
+
+
+    try:
+        # 建立與 Gmail SMTP 伺服器的連線 (使用 SSL)
+        with smtplib.SMTP_SSL("mail.kingza.com.tw", 465) as server:
+            if not (isinstance(email, float) and math.isnan(email)):
+                server.login(sender_email, password)
+                server.sendmail(sender_email, receiver_email, message.as_string())
+                print("郵件寄送成功！")
+
+    except Exception as e:
+        print(f"發生錯誤：{e}")
 @app.route("/data")
 def index():
     with open("permissions.json", "r", encoding="utf-8") as f:
@@ -291,7 +346,7 @@ def deletuser():
     with open("permissions.json", "w", encoding="utf-8") as f:
         json.dump(newdata, f, ensure_ascii=False, indent=4)
     return jsonify({"success": True, "message": "資料已儲存"})
-@app.route("/")
+@app.route("/home")
 def home():
     return render_template("home.html" )
 @app.route("/store")
@@ -486,5 +541,6 @@ def handle_message(event):
 # scheduler.start()
 
 # ===== Flask 啟動 =====
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8018)
