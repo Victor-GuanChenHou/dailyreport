@@ -11,7 +11,7 @@ from linebot.v3 import (WebhookHandler)
 from linebot.v3.exceptions import (InvalidSignatureError)
 from linebot.v3.messaging import (Configuration, ApiClient,MessagingApi,ReplyMessageRequest,TextMessage)
 from linebot.v3.webhooks import (MessageEvent,TextMessageContent)
-from linebot.v3.messaging.models import (FlexMessage,PushMessageRequest,TemplateMessage,ButtonsTemplate,PostbackAction,MessageAction,URIAction)
+from linebot.v3.messaging.models import (FlexBubble,FlexBox,FlexText,FlexMessage,PushMessageRequest,TemplateMessage,ButtonsTemplate,PostbackAction,MessageAction,URIAction)
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -487,15 +487,22 @@ def send_table(user_id):
         }
     }
     
-    message = FlexMessage(
-        alt_text="每日報表",
-        template=flex_contents
-    )
-    line_bot_api.push_message(
-        PushMessageRequest(
-            to=user_id,
-            messages=[message]
-        )
+     # 產生 FlexText 內容
+    text_items = [FlexText(text=f"{d['name']}       {d['count']}") for d in top_departments]
+
+    # Box 包起來
+    body_box = FlexBox(layout="vertical", contents=[FlexText(text="📊 每日報表 Top 10", weight="bold", size="xl")] + text_items)
+
+    # Bubble
+    bubble = FlexBubble(body=body_box)
+
+    # FlexMessage
+    flex_message = FlexMessage(alt_text="每日報表", contents=bubble)
+
+    # 推播
+    line_bot_api.push_messages(
+        to=user_id,
+        messages=[flex_message]
     )
 def send_excel_button(user_id, file_name,day):
     with open("settings.json", "r", encoding="utf-8") as f:
