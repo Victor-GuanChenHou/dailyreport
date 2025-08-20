@@ -10,7 +10,7 @@ from flask import Flask, request, abort
 from linebot.v3 import (WebhookHandler)
 from linebot.v3.exceptions import (InvalidSignatureError)
 from linebot.v3.messaging import (Configuration, ApiClient,MessagingApi,ReplyMessageRequest,TextMessage)
-from linebot.v3.webhooks import (MessageEvent,TextMessageContent,TextMessage)
+from linebot.v3.webhooks import (MessageEvent,TextMessageContent)
 from linebot.v3.messaging.models import (PushMessageRequest,TemplateMessage,ButtonsTemplate,PostbackAction,MessageAction,URIAction)
 import smtplib
 from email.mime.text import MIMEText
@@ -485,7 +485,7 @@ def send_excel_button(user_id, file_name,day):
         )
     )
 # ====== 使用者傳訊息事件 ======
-@handler.add(MessageEvent, message=TextMessage)
+@handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     user_id = event.source.user_id
     user_text = event.message.text.strip()
