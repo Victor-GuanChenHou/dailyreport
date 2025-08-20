@@ -560,7 +560,7 @@ def handle_message(event):
         date='2025-08-10'
         send_excel_button('Ue8115fd6e2a0ffb3170fa8a0949ce4b9',f'{date}daily_report.xlsx')
     elif user_text=='Data2':
-        send_table()
+        send_table('Ue8115fd6e2a0ffb3170fa8a0949ce4b9')
 
 # ====== 使用者加好友事件 (FollowEvent) ======
 # @handler.add(FollowEvent)
