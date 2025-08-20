@@ -500,7 +500,7 @@ def send_table(user_id):
     flex_message = FlexMessage(alt_text="每日報表", contents=bubble)
 
     # 推播
-    line_bot_api.push_messages(
+    line_bot_api.push_message(
         to=user_id,
         messages=[flex_message]
     )
