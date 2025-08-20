@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify,send_from_directory
 import json
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -10,15 +11,7 @@ from linebot.v3 import (WebhookHandler)
 from linebot.v3.exceptions import (InvalidSignatureError)
 from linebot.v3.messaging import (Configuration, ApiClient,MessagingApi,ReplyMessageRequest,TextMessage)
 from linebot.v3.webhooks import (MessageEvent,TextMessageContent)
-from linebot.v3.messaging.models import (
-    FlexMessage,
-    PushMessageRequest,
-    TemplateMessage,
-    ButtonsTemplate,
-    PostbackAction,
-    MessageAction,
-    URIAction
-)
+from linebot.v3.messaging.models import (FlexMessage,PushMessageRequest,TemplateMessage,ButtonsTemplate,PostbackAction,MessageAction,URIAction)
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -45,11 +38,39 @@ configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 api_client = ApiClient(configuration)
 line_bot_api = MessagingApi(api_client)
-
+global  last_setting
+with open("settings.json", "r", encoding="utf-8") as f:
+        last_settings = json.load(f)
+last_setting=last_settings[0]
 # ===== 全域資料 =====
 
 settings = {"hour": 9, "minute": 0}  # 每日推送時間
+def update_job():
+    """檢查設定是否改變，更新排程"""
+    global current_job, last_setting
+    with open("settings.json", "r", encoding="utf-8") as f:
+        settings = json.load(f)
+    setting=settings[0]
+    # 判斷是否需要更新 job
+    if last_setting.get("hour") != setting.get("hour"):
+        hour = setting.get("hour", 9)
 
+        # 刪掉舊 job
+        if current_job:
+            scheduler.remove_job(current_job.id)
+
+        # 建立新 job
+        trigger = CronTrigger(hour=hour, minute=0)
+        current_job = scheduler.add_job(send_message, trigger)
+        print(f"[{datetime.now()}] 更新排程: 每天 {hour}:00 發送訊息")
+
+    last_setting = setting
+def send_message():
+    """發送訊息任務"""
+    with open("settings.json", "r", encoding="utf-8") as f:
+        setting = json.load(f)
+    message = setting.get("message", "預設訊息")
+    print(f"[{datetime.now()}] 發送訊息: {message}")
 def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料excel期始位置
     with open("permissions.json", "r", encoding="utf-8") as f:
         permission = json.load(f)
@@ -404,7 +425,6 @@ def editsetting():
     with open("settings.json", "r", encoding="utf-8") as f:
         setting = json.load(f)
     data = request.get_json()
-    print(data)
     for per in setting:
         per['hour']=data['hour']
         per['minute']=data['minute']
@@ -432,9 +452,51 @@ def callback():
         abort(400)
 
     return 'OK'
-
 # 發送檔案下載連結
-def send_excel_button(user_id, file_name):
+def send_table(user_id):
+    top_departments = [
+        {"name": "業務", "count": 120},
+        {"name": "工程", "count": 150},
+        {"name": "行銷", "count": 80},
+        {"name": "客服", "count": 30},
+        {"name": "財務", "count": 60},
+        {"name": "設計", "count": 45},
+        {"name": "採購", "count": 25},
+        {"name": "物流", "count": 35},
+        {"name": "法務", "count": 20},
+        {"name": "行政", "count": 40}
+    ]
+
+    # 生成 Flex Message 內容
+    flex_contents = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": "📊 每日報表 Top 10", "weight": "bold", "size": "xl"},
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {"type": "text", "text": f"{d['name']}       {d['count']}"} 
+                        for d in top_departments
+                    ]
+                }
+            ]
+        }
+    }
+    flex_message = FlexMessage(
+    alt_text="每日報表", 
+    contents=flex_contents
+    )
+
+    # 使用 v3 推播訊息
+    line_bot_api.push_message(
+        to=user_id, 
+        messages=[flex_message]
+    )
+def send_excel_button(user_id, file_name,day):
     with open("settings.json", "r", encoding="utf-8") as f:
         setting = json.load(f)
     setting = setting[0]
@@ -448,7 +510,7 @@ def send_excel_button(user_id, file_name):
     buttons_template = ButtonsTemplate(
         thumbnail_image_url=f"https://{setting['ngrokid']}/png/logo.png",
         title="日報表",
-        text="2025-08-18",
+        text=day,
         actions=[
             URIAction(label="Download", uri=file_url),
         ]
@@ -463,20 +525,6 @@ def send_excel_button(user_id, file_name):
             messages=[message]
         )
     )
-
-# ====== 使用者加好友事件 (FollowEvent) ======
-# @handler.add(FollowEvent)
-# def handle_follow(event):
-#     user_id = event.source.user_id
-#     print("新加入的使用者 ID:", user_id)
-
-#     # 可以回覆一則歡迎訊息
-#     line_bot_api.reply_message(
-#         event.reply_token,
-#         TextSendMessage(text=f"歡迎加入！你的ID是 {user_id}")
-#     )
-
-
 # ====== 使用者傳訊息事件 ======
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
@@ -511,7 +559,20 @@ def handle_message(event):
         excelmake("A14176",'2025-08-10',data,5)
         date='2025-08-10'
         send_excel_button('Ue8115fd6e2a0ffb3170fa8a0949ce4b9',f'{date}daily_report.xlsx')
-        
+    elif user_text=='Data2':
+        send_table()
+
+# ====== 使用者加好友事件 (FollowEvent) ======
+# @handler.add(FollowEvent)
+# def handle_follow(event):
+#     user_id = event.source.user_id
+#     print("新加入的使用者 ID:", user_id)
+
+#     # 可以回覆一則歡迎訊息
+#     line_bot_api.reply_message(
+#         event.reply_token,
+#         TextSendMessage(text=f"歡迎加入！你的ID是 {user_id}")
+#     )
 
 
 
@@ -541,6 +602,10 @@ def handle_message(event):
 # scheduler.start()
 
 # ===== Flask 啟動 =====
-
+scheduler = BackgroundScheduler()
+current_job = None
+scheduler.add_job(update_job, 'interval', minutes=1)
+scheduler.start()
 if __name__ == "__main__":
+
     app.run(host="0.0.0.0", port=8018)
