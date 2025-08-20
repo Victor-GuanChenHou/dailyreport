@@ -11,7 +11,7 @@ from linebot.v3 import (WebhookHandler)
 from linebot.v3.exceptions import (InvalidSignatureError)
 from linebot.v3.messaging import (Configuration, ApiClient,MessagingApi,ReplyMessageRequest,TextMessage)
 from linebot.v3.webhooks import (MessageEvent,TextMessageContent)
-from linebot.v3.messaging.models import (FlexBubble,FlexBox,FlexText,FlexMessage,PushMessageRequest,TemplateMessage,ButtonsTemplate,PostbackAction,MessageAction,URIAction)
+from linebot.v3.messaging.models import (PushMessageRequest,TemplateMessage,ButtonsTemplate,PostbackAction,MessageAction,URIAction)
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -453,57 +453,7 @@ def callback():
 
     return 'OK'
 # 發送檔案下載連結
-def send_table(user_id):
-    top_departments = [
-        {"name": "業務", "count": 120},
-        {"name": "工程", "count": 150},
-        {"name": "行銷", "count": 80},
-        {"name": "客服", "count": 30},
-        {"name": "財務", "count": 60},
-        {"name": "設計", "count": 45},
-        {"name": "採購", "count": 25},
-        {"name": "物流", "count": 35},
-        {"name": "法務", "count": 20},
-        {"name": "行政", "count": 40}
-    ]
 
-    # 生成 Flex Message 內容
-    flex_contents = {
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {"type": "text", "text": "📊 每日報表 Top 10", "weight": "bold", "size": "xl"},
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {"type": "text", "text": f"{d['name']}       {d['count']}"} 
-                        for d in top_departments
-                    ]
-                }
-            ]
-        }
-    }
-    
-     # 產生 FlexText 內容
-    text_items = [FlexText(text=f"{d['name']}       {d['count']}") for d in top_departments]
-
-    # Box 包起來
-    body_box = FlexBox(layout="vertical", contents=[FlexText(text="📊 每日報表 Top 10", weight="bold", size="xl")] + text_items)
-
-    # Bubble
-    bubble = FlexBubble(body=body_box)
-
-    # FlexMessage
-    flex_message = FlexMessage(alt_text="每日報表", contents=bubble)
-
-    # 推播
-    line_bot_api.push_message(
-        to=user_id,
-        messages=[flex_message]
-    )
 def send_excel_button(user_id, file_name,day):
     with open("settings.json", "r", encoding="utf-8") as f:
         setting = json.load(f)
@@ -567,8 +517,7 @@ def handle_message(event):
         excelmake("A14176",'2025-08-10',data,5)
         date='2025-08-10'
         send_excel_button('Ue8115fd6e2a0ffb3170fa8a0949ce4b9',f'{date}daily_report.xlsx')
-    # elif user_text=='Data2':
-    #     send_table('Ue8115fd6e2a0ffb3170fa8a0949ce4b9')
+
 
 # ====== 使用者加好友事件 (FollowEvent) ======
 # @handler.add(FollowEvent)
