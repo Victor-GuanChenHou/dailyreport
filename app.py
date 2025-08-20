@@ -19,6 +19,7 @@ from email.mime.application import MIMEApplication
 from dotenv import load_dotenv
 import math
 import os
+
 ENV = './.env' 
 load_dotenv(dotenv_path=ENV)
 
@@ -52,25 +53,43 @@ def update_job():
         settings = json.load(f)
     setting=settings[0]
     # 判斷是否需要更新 job
-    if last_setting.get("hour") != setting.get("hour"):
+    if last_setting.get("hour") != setting.get("hour") or last_setting.get("minute") != setting.get("minute"):
         hour = setting.get("hour", 9)
-
+        minute = setting.get("minute", 0)
         # 刪掉舊 job
         if current_job:
             scheduler.remove_job(current_job.id)
 
         # 建立新 job
-        trigger = CronTrigger(hour=hour, minute=0)
+        trigger = CronTrigger(hour=hour, minute=minute)
         current_job = scheduler.add_job(send_message, trigger)
-        print(f"[{datetime.now()}] 更新排程: 每天 {hour}:00 發送訊息")
+        print(f"[{datetime.now()}] 更新排程: 每天 {hour}:{minute} 發送訊息")
 
     last_setting = setting
 def send_message():
     """發送訊息任務"""
-    with open("settings.json", "r", encoding="utf-8") as f:
-        setting = json.load(f)
-    message = setting.get("message", "預設訊息")
-    print(f"[{datetime.now()}] 發送訊息: {message}")
+    day = datetime.today().strftime("%Y-%m-%d")
+    with open("permissions.json", "r", encoding="utf-8") as f:
+        permissions = json.load(f)
+    data = [
+            ["全品牌", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["Total", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["蘭城新月", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["信義威秀", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["廣三SOGO", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["板橋環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["高雄義大", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["左營環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+        ]
+    for per in permissions:
+        user_id=per['user_id']
+        user_id_LINE=per['LINE']
+        file_name=excelmake(user_id,day,data,start=5)
+        Send_EMAIL(user_id,day)
+        send_excel_button(user_id_LINE, file_name,day)#user_id=LINEID
+    
+    print(f"[{datetime.now()}] 發送訊息: ")
+
 def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料excel期始位置
     with open("permissions.json", "r", encoding="utf-8") as f:
         permission = json.load(f)
@@ -266,6 +285,8 @@ def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料ex
     for col in range(1, 30):
         ws.column_dimensions[get_column_letter(col)].width = 15
     wb.save(f"{user_folder}/{day}daily_report.xlsx")
+    filename=f"{day}daily_report.xlsx"
+    return filename
 def Send_EMAIL(user_id,day):
     # 郵件內容設定
     sender_email = os.getenv('MAIL')
@@ -564,6 +585,19 @@ scheduler = BackgroundScheduler()
 current_job = None
 scheduler.add_job(update_job, 'interval', minutes=1)
 scheduler.start()
+
+data = [
+            ["全品牌", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["Total", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["蘭城新月", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["信義威秀", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["廣三SOGO", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["板橋環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["高雄義大", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["左營環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+        ]
+
+excelmake("A14176",'2025-08-10',data,5)
 if __name__ == "__main__":
 
     app.run(host="0.0.0.0", port=8018)
