@@ -484,7 +484,7 @@ def send_excel_button(user_id, file_name,day):
         )
     )
 # ====== 使用者傳訊息事件 ======
-@handler.add(MessageEvent, message=TextMessageContent)
+@handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_id = event.source.user_id
     user_text = event.message.text
