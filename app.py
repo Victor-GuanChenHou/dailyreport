@@ -486,15 +486,16 @@ def send_table(user_id):
             ]
         }
     }
-    flex_message = FlexMessage(
-    alt_text="每日報表", 
-    contents=flex_contents
+    
+    message = FlexMessage(
+        alt_text="每日報表",
+        template=flex_contents
     )
-
-    # 使用 v3 推播訊息
     line_bot_api.push_message(
-        to=user_id, 
-        messages=[flex_message]
+        PushMessageRequest(
+            to=user_id,
+            messages=[message]
+        )
     )
 def send_excel_button(user_id, file_name,day):
     with open("settings.json", "r", encoding="utf-8") as f:
