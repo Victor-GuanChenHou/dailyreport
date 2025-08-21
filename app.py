@@ -19,7 +19,8 @@ from email.mime.application import MIMEApplication
 from dotenv import load_dotenv
 import math
 import os
-
+from collections import defaultdict
+import pyodbc
 ENV = './.env' 
 load_dotenv(dotenv_path=ENV)
 
@@ -46,6 +47,7 @@ last_setting=last_settings[0]
 # ===== 全域資料 =====
 
 settings = {"hour": 9, "minute": 0}  # 每日推送時間
+
 def update_job():
     """檢查設定是否改變，更新排程"""
     global current_job, last_setting
@@ -74,12 +76,12 @@ def send_message():
     data = [
             ["全品牌", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
             ["Total", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["蘭城新月", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["信義威秀", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["廣三SOGO", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["板橋環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["高雄義大", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["左營環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["勝牛蘭城新月", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["王將信義威秀", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["杏子廣三SOGO", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["橋村板橋環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["杏子高雄義大", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["杏子左營環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
         ]
     for per in permissions:
         user_id=per['user_id']
@@ -87,9 +89,7 @@ def send_message():
         file_name=excelmake(user_id,day,data,start=5)
         Send_EMAIL(user_id,day)
         send_excel_button(user_id_LINE, file_name,day)#user_id=LINEID
-    
     print(f"[{datetime.now()}] 發送訊息: ")
-
 def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料excel期始位置
     with open("permissions.json", "r", encoding="utf-8") as f:
         permission = json.load(f)
@@ -105,189 +105,212 @@ def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料ex
     date_range_str = f"{month}/1 ~ {month}/{dataday}"
     ytd_range_str=f"1/1 ~ {month}/{dataday}"
     wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = f"{day}Daily Report"
+    brand_data = defaultdict(list)
+    for row in data:
+        store_name = row[0]
+        brand = store_name[:1]  # 前兩個字當品牌
+        if brand=='杏':
+            rowname='杏子豬排'
+        elif brand=='王': 
+            rowname='大阪王將'
+        elif brand=='橋':
+            rowname='橋村炸雞'
+        elif brand=='勝':
+            rowname='京都勝牛'
+        elif brand=='雞': 
+            rowname='雞三和'   
+        else:
+            rowname=''
+        brand_data[rowname].append(row)
+    # 刪掉預設的空白 sheet
+    default_sheet = wb.active
+    wb.remove(default_sheet)
+    # 根據品牌放資料
+    for brand, data in brand_data.items():
+        print(f"{brand}: {len(data)} 筆")
+        for r in data:
+            print("   ", r[0])
+        # 日期 & 店數
+        ws = wb.create_sheet(title=brand)
+        ws.merge_cells("A1:B1")
+        ws["A1"] = day
+        ws["A1"].alignment = Alignment(horizontal="center")
+        ws["A2"] = "店數"
+        ws["B2"] = len(data)-2
+        # 標題顏色
+        sales_fill = PatternFill("solid", fgColor="800000")   # 暗紅
+        tc_fill = PatternFill("solid", fgColor="006666")      # 藍綠
+        ta_fill = PatternFill("solid", fgColor="660066")      # 紫色
+        header_font = Font(bold=True, color="FFFFFF")
+        # 寫 Daily Sales 標題
+        ws.merge_cells(f"C{start}:E{start}")
+        ws[f"C{start}"] = "Daily Sales"
+        ws[f"C{start}"].fill = sales_fill
+        ws[f"C{start}"].font = header_font
+        ws[f"C{start}"].alignment = Alignment(horizontal="center")
+        ws[f"C{start+1}"], ws[f"D{start+1}"], ws[f"E{start+1}"] = "CY", "PY", "Index"
+        for col in ["C", "D", "E"]:
+            ws[f"{col}{start+1}"].fill = sales_fill
+            ws[f"{col}{start+1}"].font = header_font
+            ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+        # 寫 Daily TC 標題
+        ws.merge_cells(f"F{start}:H{start}")
+        ws[f"F{start}"] = "Daily TC"
+        ws[f"F{start}"].fill = tc_fill
+        ws[f"F{start}"].font = header_font
+        ws[f"F{start}"].alignment = Alignment(horizontal="center")
 
-    # 日期 & 店數
-    ws.merge_cells("A1:B1")
-    ws["A1"] = day
-    ws["A1"].alignment = Alignment(horizontal="center")
-    ws["A2"] = "店數"
-    ws["B2"] = len(data)-2
-    # 標題顏色
-    sales_fill = PatternFill("solid", fgColor="800000")   # 暗紅
-    tc_fill = PatternFill("solid", fgColor="006666")      # 藍綠
-    ta_fill = PatternFill("solid", fgColor="660066")      # 紫色
-    header_font = Font(bold=True, color="FFFFFF")
-    # 寫 Daily Sales 標題
-    ws.merge_cells(f"C{start}:E{start}")
-    ws[f"C{start}"] = "Daily Sales"
-    ws[f"C{start}"].fill = sales_fill
-    ws[f"C{start}"].font = header_font
-    ws[f"C{start}"].alignment = Alignment(horizontal="center")
-    ws[f"C{start+1}"], ws[f"D{start+1}"], ws[f"E{start+1}"] = "CY", "PY", "Index"
-    for col in ["C", "D", "E"]:
-        ws[f"{col}{start+1}"].fill = sales_fill
-        ws[f"{col}{start+1}"].font = header_font
-        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
-    # 寫 Daily TC 標題
-    ws.merge_cells(f"F{start}:H{start}")
-    ws[f"F{start}"] = "Daily TC"
-    ws[f"F{start}"].fill = tc_fill
-    ws[f"F{start}"].font = header_font
-    ws[f"F{start}"].alignment = Alignment(horizontal="center")
+        ws[f"F{start+1}"], ws[f"G{start+1}"], ws[f"H{start+1}"] = "CY", "PY", "Index"
+        for col in ["F", "G", "H"]:
+            ws[f"{col}{start+1}"].fill = tc_fill
+            ws[f"{col}{start+1}"].font = header_font
+            ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
 
-    ws[f"F{start+1}"], ws[f"G{start+1}"], ws[f"H{start+1}"] = "CY", "PY", "Index"
-    for col in ["F", "G", "H"]:
-        ws[f"{col}{start+1}"].fill = tc_fill
-        ws[f"{col}{start+1}"].font = header_font
-        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+        # 寫 Daily TA 標題
+        ws.merge_cells(f"I{start}:K{start}")
+        ws[f"I{start}"] = "Daily TA"
+        ws[f"I{start}"].fill = ta_fill
+        ws[f"I{start}"].font = header_font
+        ws[f"I{start}"].alignment = Alignment(horizontal="center")
 
-    # 寫 Daily TA 標題
-    ws.merge_cells(f"I{start}:K{start}")
-    ws[f"I{start}"] = "Daily TA"
-    ws[f"I{start}"].fill = ta_fill
-    ws[f"I{start}"].font = header_font
-    ws[f"I{start}"].alignment = Alignment(horizontal="center")
+        ws[f"I{start+1}"], ws[f"J{start+1}"], ws[f"K{start+1}"] = "CY", "PY", "Index"
+        for col in ["I", "J", "K"]:
+            ws[f"{col}{start+1}"].fill = ta_fill
+            ws[f"{col}{start+1}"].font = header_font
+            ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+        # 寫 MTD Sales 標題
+        ws.merge_cells(f"L{start}:N{start}")
+        ws[f"L{start}"] = f"MTD Sales({date_range_str})"
+        ws[f"L{start}"].fill = sales_fill
+        ws[f"L{start}"].font = header_font
+        ws[f"L{start}"].alignment = Alignment(horizontal="center")
+        ws[f"L{start+1}"], ws[f"M{start+1}"], ws[f"N{start+1}"] = "CY", "PY", "Index"
+        for col in ["L", "M", "N"]:
+            ws[f"{col}{start+1}"].fill = sales_fill
+            ws[f"{col}{start+1}"].font = header_font
+            ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+        # 寫 MTD TC Sales 標題
+        ws.merge_cells(f"O{start}:Q{start}")
+        ws[f"O{start}"] = f"MTD TC Sales({date_range_str})"
+        ws[f"O{start}"].fill = tc_fill
+        ws[f"O{start}"].font = header_font
+        ws[f"O{start}"].alignment = Alignment(horizontal="center")
+        ws[f"O{start+1}"], ws[f"P{start+1}"], ws[f"Q{start+1}"] = "CY", "PY", "Index"
+        for col in ["O", "P", "Q"]:
+            ws[f"{col}{start+1}"].fill = tc_fill
+            ws[f"{col}{start+1}"].font = header_font
+            ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+        # 寫 MTD TA Sales 標題
+        ws.merge_cells(f"R{start}:T{start}")
+        ws[f"R{start}"] = f"MTD TA Sales({date_range_str})"
+        ws[f"R{start}"].fill = ta_fill
+        ws[f"R{start}"].font = header_font
+        ws[f"R{start}"].alignment = Alignment(horizontal="center")
+        ws[f"R{start+1}"], ws[f"S{start+1}"], ws[f"T{start+1}"] = "CY", "PY", "Index"
+        for col in ["R", "S", "T"]:
+            ws[f"{col}{start+1}"].fill = ta_fill
+            ws[f"{col}{start+1}"].font = header_font
+            ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+        # 寫 YTD Sales 標題
+        ws.merge_cells(f"U{start}:W{start}")
+        ws[f"U{start}"] = f"YTD Sales({ytd_range_str})"
+        ws[f"U{start}"].fill = sales_fill
+        ws[f"U{start}"].font = header_font
+        ws[f"U{start}"].alignment = Alignment(horizontal="center")
+        ws[f"U{start+1}"], ws[f"V{start+1}"], ws[f"W{start+1}"] = "CY", "PY", "Index"
+        for col in ["U", "V", "W"]:
+            ws[f"{col}{start+1}"].fill = sales_fill
+            ws[f"{col}{start+1}"].font = header_font
+            ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+        # 寫 YTD TC Sales 標題
+        ws.merge_cells(f"X{start}:Z{start}")
+        ws[f"X{start}"] = f"YTD TC Sales({ytd_range_str})"
+        ws[f"X{start}"].fill = tc_fill
+        ws[f"X{start}"].font = header_font
+        ws[f"X{start}"].alignment = Alignment(horizontal="center")
+        ws[f"X{start+1}"], ws[f"Y{start+1}"], ws[f"Q{start+1}"] = "CY", "PY", "Index"
+        for col in ["X", "Y", "Z"]:
+            ws[f"{col}{start+1}"].fill = tc_fill
+            ws[f"{col}{start+1}"].font = header_font
+            ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+        # 寫 YTD TA Sales 標題
+        ws.merge_cells(f"AA{start}:AC{start}")
+        ws[f"AA{start}"] = f"YTD TA Sales({ytd_range_str})"
+        ws[f"AA{start}"].fill = ta_fill
+        ws[f"AA{start}"].font = header_font
+        ws[f"AA{start}"].alignment = Alignment(horizontal="center")
+        ws[f"AA{start+1}"], ws[f"AB{start+1}"], ws[f"AC{start+1}"] = "CY", "PY", "Index"
+        for col in ["AA", "AB", "AC"]:
+            ws[f"{col}{start+1}"].fill = ta_fill
+            ws[f"{col}{start+1}"].font = header_font
+            ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
+        row=start+2
+        for r in data:
+            ws[f"A{row}"] = r[0]
+            ws[f"B{row}"] = r[1]
+            ws[f"C{row}"] = r[2]
+            ws[f"C{row}"].number_format = "#,##0"
+            ws[f"D{row}"] = r[3]
+            ws[f"D{row}"].number_format = "#,##0"
+            ws[f"E{row}"] = r[4]
+            ws[f"E{row}"].number_format = "#,##0"
+            ws[f"F{row}"] = r[5]
+            ws[f"F{row}"].number_format = "#,##0"
+            ws[f"G{row}"] = r[6]
+            ws[f"G{row}"].number_format = "#,##0"
+            ws[f"H{row}"] = r[7]
+            ws[f"H{row}"].number_format = "#,##0"
+            ws[f"I{row}"] = r[8]
+            ws[f"I{row}"].number_format = "#,##0"
+            ws[f"J{row}"] = r[9]
+            ws[f"J{row}"].number_format = "#,##0"
+            ws[f"K{row}"] = r[10]
+            ws[f"K{row}"].number_format = "#,##0"
+            ws[f"L{row}"] = r[11]
+            ws[f"L{row}"].number_format = "#,##0"
+            ws[f"M{row}"] = r[12]
+            ws[f"M{row}"].number_format = "#,##0"
+            ws[f"N{row}"] = r[13]
+            ws[f"N{row}"].number_format = "#,##0"
+            ws[f"O{row}"] = r[14]
+            ws[f"O{row}"].number_format = "#,##0"
+            ws[f"P{row}"] = r[15]
+            ws[f"P{row}"].number_format = "#,##0"
+            ws[f"Q{row}"] = r[16]
+            ws[f"Q{row}"].number_format = "#,##0"
+            ws[f"R{row}"] = r[17]
+            ws[f"R{row}"].number_format = "#,##0"
+            ws[f"S{row}"] = r[18]
+            ws[f"S{row}"].number_format = "#,##0"
+            ws[f"T{row}"] = r[19]
+            ws[f"T{row}"].number_format = "#,##0"
+            ws[f"U{row}"] = r[20]
+            ws[f"U{row}"].number_format = "#,##0"
+            ws[f"V{row}"] = r[21]
+            ws[f"V{row}"].number_format = "#,##0"
+            ws[f"W{row}"] = r[22]
+            ws[f"W{row}"].number_format = "#,##0"
+            ws[f"X{row}"] = r[23]
+            ws[f"X{row}"].number_format = "#,##0"
+            ws[f"Y{row}"] = r[24]
+            ws[f"Y{row}"].number_format = "#,##0"
+            ws[f"Z{row}"] = r[25]
+            ws[f"Z{row}"].number_format = "#,##0"
+            ws[f"AA{row}"] = r[26]
+            ws[f"AA{row}"].number_format = "#,##0"
+            ws[f"AB{row}"] = r[27]
+            ws[f"AB{row}"].number_format = "#,##0"
+            ws[f"AC{row}"] = r[28]
+            ws[f"AC{row}"].number_format = "#,##0"
+            row += 1
 
-    ws[f"I{start+1}"], ws[f"J{start+1}"], ws[f"K{start+1}"] = "CY", "PY", "Index"
-    for col in ["I", "J", "K"]:
-        ws[f"{col}{start+1}"].fill = ta_fill
-        ws[f"{col}{start+1}"].font = header_font
-        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
-    # 寫 MTD Sales 標題
-    ws.merge_cells(f"L{start}:N{start}")
-    ws[f"L{start}"] = f"MTD Sales({date_range_str})"
-    ws[f"L{start}"].fill = sales_fill
-    ws[f"L{start}"].font = header_font
-    ws[f"L{start}"].alignment = Alignment(horizontal="center")
-    ws[f"L{start+1}"], ws[f"M{start+1}"], ws[f"N{start+1}"] = "CY", "PY", "Index"
-    for col in ["L", "M", "N"]:
-        ws[f"{col}{start+1}"].fill = sales_fill
-        ws[f"{col}{start+1}"].font = header_font
-        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
-    # 寫 MTD TC Sales 標題
-    ws.merge_cells(f"O{start}:Q{start}")
-    ws[f"O{start}"] = f"MTD TC Sales({date_range_str})"
-    ws[f"O{start}"].fill = tc_fill
-    ws[f"O{start}"].font = header_font
-    ws[f"O{start}"].alignment = Alignment(horizontal="center")
-    ws[f"O{start+1}"], ws[f"P{start+1}"], ws[f"Q{start+1}"] = "CY", "PY", "Index"
-    for col in ["O", "P", "Q"]:
-        ws[f"{col}{start+1}"].fill = tc_fill
-        ws[f"{col}{start+1}"].font = header_font
-        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
-    # 寫 MTD TA Sales 標題
-    ws.merge_cells(f"R{start}:T{start}")
-    ws[f"R{start}"] = f"MTD TA Sales({date_range_str})"
-    ws[f"R{start}"].fill = ta_fill
-    ws[f"R{start}"].font = header_font
-    ws[f"R{start}"].alignment = Alignment(horizontal="center")
-    ws[f"R{start+1}"], ws[f"S{start+1}"], ws[f"T{start+1}"] = "CY", "PY", "Index"
-    for col in ["R", "S", "T"]:
-        ws[f"{col}{start+1}"].fill = ta_fill
-        ws[f"{col}{start+1}"].font = header_font
-        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
-     # 寫 YTD Sales 標題
-    ws.merge_cells(f"U{start}:W{start}")
-    ws[f"U{start}"] = f"YTD Sales({ytd_range_str})"
-    ws[f"U{start}"].fill = sales_fill
-    ws[f"U{start}"].font = header_font
-    ws[f"U{start}"].alignment = Alignment(horizontal="center")
-    ws[f"U{start+1}"], ws[f"V{start+1}"], ws[f"W{start+1}"] = "CY", "PY", "Index"
-    for col in ["U", "V", "W"]:
-        ws[f"{col}{start+1}"].fill = sales_fill
-        ws[f"{col}{start+1}"].font = header_font
-        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
-    # 寫 YTD TC Sales 標題
-    ws.merge_cells(f"X{start}:Z{start}")
-    ws[f"X{start}"] = f"YTD TC Sales({ytd_range_str})"
-    ws[f"X{start}"].fill = tc_fill
-    ws[f"X{start}"].font = header_font
-    ws[f"X{start}"].alignment = Alignment(horizontal="center")
-    ws[f"X{start+1}"], ws[f"P{start+1}"], ws[f"Q{start+1}"] = "CY", "PY", "Index"
-    for col in ["X", "Y", "Z"]:
-        ws[f"{col}{start+1}"].fill = tc_fill
-        ws[f"{col}{start+1}"].font = header_font
-        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
-    # 寫 YTD TA Sales 標題
-    ws.merge_cells(f"AA{start}:AC{start}")
-    ws[f"AA{start}"] = f"YTD TA Sales({ytd_range_str})"
-    ws[f"AA{start}"].fill = ta_fill
-    ws[f"AA{start}"].font = header_font
-    ws[f"AA{start}"].alignment = Alignment(horizontal="center")
-    ws[f"AA{start+1}"], ws[f"AB{start+1}"], ws[f"AC{start+1}"] = "CY", "PY", "Index"
-    for col in ["AA", "AB", "AC"]:
-        ws[f"{col}{start+1}"].fill = ta_fill
-        ws[f"{col}{start+1}"].font = header_font
-        ws[f"{col}{start+1}"].alignment = Alignment(horizontal="center")
-    row=start+2
-    for r in data:
-        ws[f"A{row}"] = r[0]
-        ws[f"B{row}"] = r[1]
-        ws[f"C{row}"] = r[2]
-        ws[f"C{row}"].number_format = "#,##0"
-        ws[f"D{row}"] = r[3]
-        ws[f"D{row}"].number_format = "#,##0"
-        ws[f"E{row}"] = r[4]
-        ws[f"E{row}"].number_format = "#,##0"
-        ws[f"F{row}"] = r[5]
-        ws[f"F{row}"].number_format = "#,##0"
-        ws[f"G{row}"] = r[6]
-        ws[f"G{row}"].number_format = "#,##0"
-        ws[f"H{row}"] = r[7]
-        ws[f"H{row}"].number_format = "#,##0"
-        ws[f"I{row}"] = r[8]
-        ws[f"I{row}"].number_format = "#,##0"
-        ws[f"J{row}"] = r[9]
-        ws[f"J{row}"].number_format = "#,##0"
-        ws[f"K{row}"] = r[10]
-        ws[f"K{row}"].number_format = "#,##0"
-        ws[f"L{row}"] = r[11]
-        ws[f"L{row}"].number_format = "#,##0"
-        ws[f"M{row}"] = r[12]
-        ws[f"M{row}"].number_format = "#,##0"
-        ws[f"N{row}"] = r[13]
-        ws[f"N{row}"].number_format = "#,##0"
-        ws[f"O{row}"] = r[14]
-        ws[f"O{row}"].number_format = "#,##0"
-        ws[f"P{row}"] = r[15]
-        ws[f"P{row}"].number_format = "#,##0"
-        ws[f"Q{row}"] = r[16]
-        ws[f"Q{row}"].number_format = "#,##0"
-        ws[f"R{row}"] = r[17]
-        ws[f"R{row}"].number_format = "#,##0"
-        ws[f"S{row}"] = r[18]
-        ws[f"S{row}"].number_format = "#,##0"
-        ws[f"T{row}"] = r[19]
-        ws[f"T{row}"].number_format = "#,##0"
-        ws[f"U{row}"] = r[20]
-        ws[f"U{row}"].number_format = "#,##0"
-        ws[f"V{row}"] = r[21]
-        ws[f"V{row}"].number_format = "#,##0"
-        ws[f"W{row}"] = r[22]
-        ws[f"W{row}"].number_format = "#,##0"
-        ws[f"X{row}"] = r[23]
-        ws[f"X{row}"].number_format = "#,##0"
-        ws[f"Y{row}"] = r[24]
-        ws[f"Y{row}"].number_format = "#,##0"
-        ws[f"Z{row}"] = r[25]
-        ws[f"Z{row}"].number_format = "#,##0"
-        ws[f"AA{row}"] = r[26]
-        ws[f"AA{row}"].number_format = "#,##0"
-        ws[f"AB{row}"] = r[27]
-        ws[f"AB{row}"].number_format = "#,##0"
-        ws[f"AC{row}"] = r[28]
-        ws[f"AC{row}"].number_format = "#,##0"
-        row += 1
-
-    # 美化欄寬
-    for col in range(1, 30):
-        ws.column_dimensions[get_column_letter(col)].width = 15
+        # 美化欄寬
+        for col in range(1, 30):
+            ws.column_dimensions[get_column_letter(col)].width = 15
     wb.save(f"{user_folder}/{day}daily_report.xlsx")
     filename=f"{day}daily_report.xlsx"
     return filename
-def Send_EMAIL(user_id,day):
+def Send_EMAIL(user_id,day):#LINEID
     # 郵件內容設定
     sender_email = os.getenv('MAIL')
     password = os.getenv('MAIL_PW')
@@ -338,6 +361,30 @@ def Send_EMAIL(user_id,day):
 
     except Exception as e:
         print(f"發生錯誤：{e}")
+def GET_HRdata(user_id):
+    load_dotenv()
+    HRDB_host = os.getenv('HRDB_host')
+    HRDB_password = os.getenv('HRDB_password')
+    HRDB_uid=os.getenv('HRDB_uid')
+    HRDB_name=os.getenv('HRDB_name')
+    conn = pyodbc.connect(
+        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+        f"SERVER={HRDB_host};"
+        f"DATABASE={HRDB_name};"
+        f"UID={HRDB_uid};"
+        f"PWD={HRDB_password};"
+        "Trusted_Connection=no;"
+    )
+    cursor = conn.cursor()
+    # SUBSTRING(UIDENTID, 2, LEN(UIDENTID) - 1) AS UIDENTID 身分證後九碼
+    cursor.execute("SELECT EMPID, HECNAME ,EMAIL FROM HRM.dbo.HRUSER WHERE EMPID = ?", (user_id,))
+    row = cursor.fetchone()
+    
+
+    if row and any(row):
+        return {'ID': row[0], 'name': row[1], 'email': row[2]}
+    else:
+        return None
 @app.route("/data")
 def index():
     with open("permissions.json", "r", encoding="utf-8") as f:
@@ -354,7 +401,8 @@ def adduser():
         "departments": data.get("storeValues", []),
         "email": data.get("email"),
         "user_id": data.get("user"),
-        "name": data.get("name")
+        "name": data.get("name"),
+        "LINE": data.get("LINE")
     })
     with open("permissions.json", "w", encoding="utf-8") as f:
         json.dump(permissions, f, ensure_ascii=False, indent=4)
@@ -514,26 +562,85 @@ def handle_message(event):
     print(f"收到來自 {user_id} 的訊息: {user_text}")
     if user_text[:2] == "工號":
         rest = user_text[2:]          # 取 "工號" 後面的字
-
+        
         if rest[0].lower() == "a" or rest[0].lower() == "A":
+            if rest[0].lower() == "a":
+                rest = "A" + rest[1:]
             result = rest
+            HR=GET_HRdata(result)
+            if HR !=None:
+                line_index = None
+                user_index = None
+                email=HR['email']
+                name=HR['name']
+                with open("permissions.json", "r", encoding="utf-8") as f:
+                    permissions = json.load(f)
+                for i, per in enumerate(permissions):
+                    if per.get('LINE') == user_id:
+                        line_index = i
+                    if per.get('user_id') == result:
+                        user_index = i
+                if line_index is not None and user_index is not None:
+                    if line_index == user_index:
+                        text=f'已有帳號:\n工號:{result}\n名稱:{name}\n電子郵件:{email}\n如有任何問題更改請洽管理員'
+                    elif line_index != user_index:
+                        # 兩筆分開 → 合併成一筆
+                        per_line = permissions[line_index]
+                        per_user = permissions[user_index]
+
+                        # 合併資訊 (以 LINE 為主，補上 user)
+                        per_line['user_id'] = result  
+
+                        # 刪掉 LINE 那筆
+                        del permissions[line_index]
+                        text=f'已有帳號:\n工號:{result}\n名稱:{name}\n電子郵件:{email}\n如有任何問題更改請洽管理員'
+
+                    elif line_index is not None:
+                        # 只有 LINE 存在 → 補 user_id
+                        permissions[line_index]['user_id'] = result
+                        permissions[line_index]['email'] = email
+                        permissions[line_index]['name'] = name
+                        permissions[line_index]['departments'] = []
+                        text=f'已更新帳號:\n工號:{result}\n名稱:{name}\n電子郵件:{email}\n如有任何問題更改請洽管理員'
+
+                    elif user_index is not None:
+                        # 只有 user_id 存在 → 補 LINE
+                        permissions[user_index]['LINE'] = user_id
+                        text=f'已更新帳號:\n工號:{result}\n名稱:{name}\n電子郵件:{email}\n如有任何問題更改請洽管理員'
+
+                    else:
+                        # 兩個都沒有 → 新增一筆
+                        permissions.append({
+                            "departments" : [],
+                            "email" :email,
+                            "user_id": result,
+                            "name":name,
+                            "LINE": user_id
+                        })
+                        text=f'已新增帳號:\n工號:{result}\n名稱:{name}\n電子郵件:{email}\n如有任何問題更改請洽管理員'
+
+                    with open("permissions.json", "w", encoding="utf-8") as f:
+                        json.dump(permissions, f, ensure_ascii=False, indent=4)
+            else:
+                 text=f'查無此工號!!\n\n請提供管理員以下訊息供查詢使用\n\n工號:{result}\ID:{user_id}'
+
             # 回覆訊息
             line_bot_api.reply_message_with_http_info(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[TextMessage(text=f"您的工號是: {result}\n你的ID是: {user_id}")]
+                    messages=[TextMessage(text=text)]
                     )
             )
     elif user_text=='Data':
         data = [
             ["全品牌", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
             ["Total", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["蘭城新月", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["信義威秀", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["廣三SOGO", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["板橋環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["高雄義大", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["左營環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["勝牛蘭城新月", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["王將信義威秀", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["杏子廣三SOGO", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["橋村板橋環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["杏子高雄義大", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["杏子左營環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
         ]
 
         excelmake("A14176",'2025-08-10',data,5)
@@ -586,18 +693,6 @@ current_job = None
 scheduler.add_job(update_job, 'interval', minutes=1)
 scheduler.start()
 
-data = [
-            ["全品牌", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["Total", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["蘭城新月", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["信義威秀", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["廣三SOGO", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["板橋環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["高雄義大", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["左營環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-        ]
-
-excelmake("A14176",'2025-08-10',data,5)
 if __name__ == "__main__":
 
     app.run(host="0.0.0.0", port=8018)

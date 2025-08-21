@@ -2,3 +2,4 @@
 *.xlsx
 /test.py
 *.json
+*.png
