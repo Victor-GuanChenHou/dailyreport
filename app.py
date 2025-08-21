@@ -595,34 +595,35 @@ def handle_message(event):
                         del permissions[line_index]
                         text=f'已有帳號:\n工號:{result}\n名稱:{name}\n電子郵件:{email}\n如有任何問題更改請洽管理員'
 
-                    elif line_index is not None:
-                        # 只有 LINE 存在 → 補 user_id
-                        permissions[line_index]['user_id'] = result
-                        permissions[line_index]['email'] = email
-                        permissions[line_index]['name'] = name
-                        permissions[line_index]['departments'] = []
-                        text=f'已更新帳號:\n工號:{result}\n名稱:{name}\n電子郵件:{email}\n如有任何問題請洽管理員'
+                elif line_index is not None:
+                    # 只有 LINE 存在 → 補 user_id
+                    permissions[line_index]['user_id'] = result
+                    permissions[line_index]['email'] = email
+                    permissions[line_index]['name'] = name
+                    permissions[line_index]['departments'] = []
+                    text=f'已更新帳號:\n工號:{result}\n名稱:{name}\n電子郵件:{email}\n如有任何問題請洽管理員'
 
-                    elif user_index is not None:
-                        # 只有 user_id 存在 → 補 LINE
-                        permissions[user_index]['LINE'] = user_id
-                        hname=permissions[user_index]['name'] 
-                        hemail=permissions[user_index]['email'] 
-                        text=f'已更新帳號:\n工號:{result}\n名稱:{hname}\n電子郵件:{hemail}\n如有任何問題請洽管理員'
+                elif user_index is not None:
+                    # 只有 user_id 存在 → 補 LINE
+                    permissions[user_index]['LINE'] = user_id
+                    hname=permissions[user_index]['name'] 
+                    hemail=permissions[user_index]['email'] 
+                        
+                    text=f'已更新帳號:\n工號:{result}\n名稱:{hname}\n電子郵件:{hemail}\n如有任何問題請洽管理員'
+                    print(result)
+                else:
+                    # 兩個都沒有 → 新增一筆
+                    permissions.append({
+                        "departments" : [],
+                        "email" :email,
+                        "user_id": result,
+                        "name":name,
+                        "LINE": user_id
+                    })
+                    text=f'已新增帳號:\n工號:{result}\n名稱:{name}\n電子郵件:{email}\n如有任何問題更改請洽管理員'
 
-                    else:
-                        # 兩個都沒有 → 新增一筆
-                        permissions.append({
-                            "departments" : [],
-                            "email" :email,
-                            "user_id": result,
-                            "name":name,
-                            "LINE": user_id
-                        })
-                        text=f'已新增帳號:\n工號:{result}\n名稱:{name}\n電子郵件:{email}\n如有任何問題更改請洽管理員'
-
-                    with open("permissions.json", "w", encoding="utf-8") as f:
-                        json.dump(permissions, f, ensure_ascii=False, indent=4)
+                with open("permissions.json", "w", encoding="utf-8") as f:
+                    json.dump(permissions, f, ensure_ascii=False, indent=4)
             else:
                  text=f'查無此工號!!\n\n請提供管理員以下訊息供查詢使用\n\n工號:{result}\nID:{user_id}'
 
