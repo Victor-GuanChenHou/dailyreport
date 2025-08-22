@@ -106,22 +106,47 @@ def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料ex
     ytd_range_str=f"1/1 ~ {month}/{dataday}"
     wb = openpyxl.Workbook()
     brand_data = defaultdict(list)
+    otherdata=[]
+    brand_map = {
+        '杏': '杏子豬排',
+        '王': '大阪王將',
+        '橋': '橋村炸雞',
+        '勝': '京都勝牛',
+        '雞': '雞三和'
+    }
     for row in data:
         store_name = row[0]
         brand = store_name[:1]  # 前兩個字當品牌
-        if brand=='杏':
-            rowname='杏子豬排'
-        elif brand=='王': 
-            rowname='大阪王將'
-        elif brand=='橋':
-            rowname='橋村炸雞'
-        elif brand=='勝':
-            rowname='京都勝牛'
-        elif brand=='雞': 
-            rowname='雞三和'   
+        if brand in brand_map:
+            rowname = brand_map[brand]
+            if store_name.endswith("Total"):  # 統一處理Total排前面
+                new_row = row.copy()  # 避免直接改原始 data
+                new_row[0] = "Total"
+                brand_data[rowname].insert(0, new_row)
+            else:
+                brand_data[rowname].append(row)
         else:
-            rowname=''
-        brand_data[rowname].append(row)
+            otherdata.append(row)
+        # if brand=='杏':
+        #     rowname='杏子豬排'
+        #     brand_data[rowname].append(row)
+        # elif brand=='王': 
+        #     rowname='大阪王將'
+        #     brand_data[rowname].append(row)
+        # elif brand=='橋':
+        #     rowname='橋村炸雞'
+        #     brand_data[rowname].append(row)
+        # elif brand=='勝':
+        #     rowname='京都勝牛'
+        #     brand_data[rowname].append(row)
+        # elif brand=='雞': 
+        #     rowname='雞三和'   
+        #     brand_data[rowname].append(row)
+        # else:
+        #     otherdata.append(row)
+            
+        
+    print(otherdata)
     # 刪掉預設的空白 sheet
     default_sheet = wb.active
     wb.remove(default_sheet)
@@ -592,7 +617,7 @@ def handle_message(event):
                         per_line['user_id'] = result  
 
                         # 刪掉 LINE 那筆
-                        del permissions[line_index]
+                        del permissions[user_index]
                         text=f'已有帳號:\n工號:{result}\n名稱:{name}\n電子郵件:{email}\n如有任何問題更改請洽管理員'
 
                 elif line_index is not None:
@@ -695,7 +720,7 @@ scheduler = BackgroundScheduler()
 current_job = None
 scheduler.add_job(update_job, 'interval', minutes=1)
 scheduler.start()
+#使用FLASK啟動須解除，目前以Gunicorn啟動
+# if __name__ == "__main__":
 
-if __name__ == "__main__":
-
-    app.run(host="0.0.0.0", port=8018)
+#     app.run(host="0.0.0.0", port=8018)
