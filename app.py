@@ -40,10 +40,8 @@ configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 api_client = ApiClient(configuration)
 line_bot_api = MessagingApi(api_client)
-global  last_setting
-with open("settings.json", "r", encoding="utf-8") as f:
-        last_settings = json.load(f)
-last_setting=last_settings[0]
+
+last_setting={"hour": 9, "minute": 0} 
 # ===== 全域資料 =====
 
 settings = {"hour": 9, "minute": 0}  # 每日推送時間
@@ -54,20 +52,24 @@ def update_job():
     with open("settings.json", "r", encoding="utf-8") as f:
         settings = json.load(f)
     setting=settings[0]
+    hour = setting.get("hour", 9)
+    minute = setting.get("minute", 0)
     # 判斷是否需要更新 job
-    if last_setting.get("hour") != setting.get("hour") or last_setting.get("minute") != setting.get("minute"):
-        hour = setting.get("hour", 9)
-        minute = setting.get("minute", 0)
+    
+    if last_setting.get("hour") != hour or last_setting.get("minute") != minute:
+        
         # 刪掉舊 job
         if current_job:
             scheduler.remove_job(current_job.id)
 
         # 建立新 job
         trigger = CronTrigger(hour=hour, minute=minute)
-        current_job = scheduler.add_job(send_message, trigger)
+        job = scheduler.add_job(send_message, trigger)
         print(f"[{datetime.now()}] 更新排程: 每天 {hour}:{minute} 發送訊息")
 
-    last_setting = setting
+        last_setting = {"hour": hour, "minute": minute}
+        globals()["current_job"] = job
+    #print(last_setting)
 def send_message():
     """發送訊息任務"""
     day = datetime.today().strftime("%Y-%m-%d")
@@ -75,7 +77,7 @@ def send_message():
         permissions = json.load(f)
     data = [
             ["全品牌", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["Total", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
+            ["杏子Total", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
             ["勝牛蘭城新月", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
             ["王將信義威秀", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
             ["杏子廣三SOGO", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
@@ -416,6 +418,8 @@ def index():
         permissions = json.load(f)
     with open("store.json", "r", encoding="utf-8") as f:
         stores = json.load(f)
+    
+
     return render_template("index.html", permissions=permissions,stores=stores,settings=settings)
 @app.route("/adduser", methods=['POST'])
 def adduser():
