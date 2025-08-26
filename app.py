@@ -45,7 +45,115 @@ last_setting={"hour": 9, "minute": 0}
 # ===== 全域資料 =====
 
 settings = {"hour": 9, "minute": 0}  # 每日推送時間
+def safe_float(val):
+    return float(val) if val is not None else 0.0
+def safe_int(val):
+    return int(val) if val is not None else 0
+def getdailydata(User,Date):
+    with open("store.json", "r", encoding="utf-8") as f:
+        stores = json.load(f)
+    with open("permissions.json", "r", encoding="utf-8") as f:
+        permissions = json.load(f)
+    depart=[]
+    for per in permissions:
+        if User==per['user_id']:
+            depart=per['departments']
+            break
+    load_dotenv()
+    Daily_HOST = os.getenv('Daily_HOST')
+    Daily_password = os.getenv('Daily_password')
+    Daily_uid=os.getenv('Daily_uid')
+    Daily_name=os.getenv('Daily_name')
+    conn = pyodbc.connect(
+        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+        f"SERVER={Daily_HOST};"
+        f"DATABASE={Daily_name};"
+        f"UID={Daily_uid};"
+        f"PWD={Daily_password};"
+        "Trusted_Connection=no;"
+    )
+    cursor = conn.cursor()
+    Date = datetime.strptime(Date, "%Y-%m-%d")
+    try:
+        Date_last_year = Date.replace(year=Date.year - 1)
+    except ValueError:
+        # 如果是 2/29 會錯誤，可以退一天
+        Date_last_year = Date.replace(year=Date.year - 1, day=28)
+    cursor.execute("SELECT store_id, total_amt ,total_customer,sales_count,DATE FROM kingza_api.dbo.SalesAggregate WHERE DATE = ?", (Date,))
+    dsc = cursor.fetchall()
+    cursor.execute("SELECT store_id, total_amt ,total_customer,sales_count,DATE FROM kingza_api.dbo.SalesAggregate WHERE DATE = ?", (Date_last_year,))
+    dsp=cursor.fetchall()
+    store_map = {s['value']: s for s in stores}
+    dsc_map = {row[0]: row for row in dsc}
+    dsp_map = {row[0]: row for row in dsp}
+    result=[]
+    for store_id in depart :
+        store_info = store_map.get(store_id, {})
+        dsc_row = dsc_map.get(store_id, (store_id, 0, 0, 0, None))
+        dsp_row = dsp_map.get(store_id, (store_id, 0, 0, 0, None))
+        
+        result.append({
+            "store_id": store_id,
+            "store_name": store_info.get("name", ""),
+            "dept": store_info.get("dept", ""),
+            
+            "dsc_total_amt": safe_float(dsc_row[1]),
+            "dsc_total_customer": safe_int(dsc_row[2]),
+            "dsc_sales_count": safe_int(dsc_row[3]),
+            "dsc_date": dsc_row[4].isoformat() if dsc_row[4] else None,
+            
+            "dsp_total_amt": safe_float(dsp_row[1]),
+            "dsp_total_customer": safe_int(dsp_row[2]),
+            "dsp_sales_count": safe_int(dsp_row[3]),
+            "dsp_date": dsp_row[4].isoformat() if dsp_row[4] else None,
+        })
+    data = []
+    for r in result:
+    # 先取得店名或其他欄位
+        row = [
+            r["store_name"],                 # 店名
+            r["dept"],                       # 區經理
+            
+            r["dsc_total_amt"],              # dsc 總額
+            r["dsp_total_amt"],              # dsp 總額
+            r["dsc_total_amt"] / r["dsp_total_amt"] if r["dsp_total_amt"] else None,  # 比例
+            
+            r["dsc_total_customer"],         # dsc 總客數
+            r["dsp_total_customer"],         # dsp 總客數
+            r["dsc_total_customer"] / r["dsp_total_customer"] if r["dsp_total_customer"] else None,  # 比例
+            
+            r["dsc_sales_count"],            # dsc 銷售筆數
+            r["dsp_sales_count"],            # dsp 銷售筆數
+            r["dsc_sales_count"] / r["dsp_sales_count"] if r["dsp_sales_count"] else None,  # 比例
 
+            #################################################################
+            r["dsc_total_amt"],              # dsc 總額
+            r["dsp_total_amt"],              # dsp 總額
+            r["dsc_total_amt"] / r["dsp_total_amt"] if r["dsp_total_amt"] else None,  # 比例
+            
+            r["dsc_total_customer"],         # dsc 總客數
+            r["dsp_total_customer"],         # dsp 總客數
+            r["dsc_total_customer"] / r["dsp_total_customer"] if r["dsp_total_customer"] else None,  # 比例
+            
+            r["dsc_sales_count"],            # dsc 銷售筆數
+            r["dsp_sales_count"],            # dsp 銷售筆數
+            r["dsc_sales_count"] / r["dsp_sales_count"] if r["dsp_sales_count"] else None,  # 比例
+            r["dsc_total_amt"],              # dsc 總額
+            r["dsp_total_amt"],              # dsp 總額
+            r["dsc_total_amt"] / r["dsp_total_amt"] if r["dsp_total_amt"] else None,  # 比例
+            
+            r["dsc_total_customer"],         # dsc 總客數
+            r["dsp_total_customer"],         # dsp 總客數
+            r["dsc_total_customer"] / r["dsp_total_customer"] if r["dsp_total_customer"] else None,  # 比例
+            
+            r["dsc_sales_count"],            # dsc 銷售筆數
+            r["dsp_sales_count"],            # dsp 銷售筆數
+            r["dsc_sales_count"] / r["dsp_sales_count"] if r["dsp_sales_count"] else None,  # 比例
+        ]
+       
+        data.append(row)
+        data.sort(key=lambda x: x[1])
+    return data      
 def update_job():
     """檢查設定是否改變，更新排程"""
     global current_job, last_setting
@@ -75,22 +183,17 @@ def send_message():
     day = datetime.today().strftime("%Y-%m-%d")
     with open("permissions.json", "r", encoding="utf-8") as f:
         permissions = json.load(f)
-    data = [
-            ["全品牌", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["杏子Total", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["勝牛蘭城新月", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["王將信義威秀", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["杏子廣三SOGO", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["橋村板橋環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["杏子高雄義大", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["杏子左營環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-        ]
     for per in permissions:
         user_id=per['user_id']
         user_id_LINE=per['LINE']
+        user_email=per['email']
+        data=getdailydata(user_id,day)
         file_name=excelmake(user_id,day,data,start=5)
-        Send_EMAIL(user_id,day)
-        send_excel_button(user_id_LINE, file_name,day)#user_id=LINEID
+ 
+        if user_email !='':
+            Send_EMAIL(user_id,day)
+        if user_id_LINE !="":
+            send_excel_button(user_id_LINE, file_name,day)#user_id=LINEID
     print(f"[{datetime.now()}] 發送訊息: ")
 def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料excel期始位置
     with open("permissions.json", "r", encoding="utf-8") as f:
@@ -148,15 +251,15 @@ def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料ex
         #     otherdata.append(row)
             
         
-    print(otherdata)
+   
     # 刪掉預設的空白 sheet
     default_sheet = wb.active
     wb.remove(default_sheet)
     # 根據品牌放資料
     for brand, data in brand_data.items():
-        print(f"{brand}: {len(data)} 筆")
-        for r in data:
-            print("   ", r[0])
+        # print(f"{brand}: {len(data)} 筆")
+        # for r in data:
+        #     print("   ", r[0])
         # 日期 & 店數
         ws = wb.create_sheet(title=brand)
         ws.merge_cells("A1:B1")
@@ -334,6 +437,7 @@ def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料ex
         # 美化欄寬
         for col in range(1, 30):
             ws.column_dimensions[get_column_letter(col)].width = 15
+        ws.column_dimensions[get_column_letter(1)].width = 25    
     wb.save(f"{user_folder}/{day}daily_report.xlsx")
     filename=f"{day}daily_report.xlsx"
     return filename
@@ -534,6 +638,7 @@ def editsetting():
 @app.route("/files/<user_id>/<path:filename>")
 def serve_file(user_id,filename):
     folder_path = os.path.join(app.config['FOLDER'], user_id)
+    print(filename)
     return send_from_directory(folder_path, filename, as_attachment=True)
 @app.route("/png/<path:filename>")
 def png_file(filename):
@@ -724,6 +829,10 @@ scheduler = BackgroundScheduler()
 current_job = None
 scheduler.add_job(update_job, 'interval', minutes=1)
 scheduler.start()
+# day = datetime.today().strftime("%Y-%m-%d")
+# data=getdailydata("A14176",day)
+# excelmake('A14176',day,data,5)
+
 #使用FLASK啟動須解除，目前以Gunicorn啟動
 # if __name__ == "__main__":
 
