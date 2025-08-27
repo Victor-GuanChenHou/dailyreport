@@ -827,6 +827,8 @@ def handle_message(event):
             )
     elif user_text[:2] == "資料":
         date_str=user_text[2:10]    
+        with open("permissions.json", "r", encoding="utf-8") as f:
+            permissions = json.load(f)
         for per in permissions:
             if user_id == per['LINE']:
                 user_id=per['user_id']
@@ -836,7 +838,7 @@ def handle_message(event):
                 file_name=excelmake(user_id,day,data,start=5)
                 send_excel_button(user_id_LINE, file_name,day)
 
-
+      
 
 # ====== 使用者加好友事件 (FollowEvent) ======
 # @handler.add(FollowEvent)
