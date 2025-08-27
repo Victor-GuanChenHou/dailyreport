@@ -74,20 +74,20 @@ def getdailydata(User,Date):
     )
     cursor = conn.cursor()
     Date = datetime.strptime(Date, "%Y-%m-%d")
-    DateMonth= Date.month
+    DateMonth = Date.strftime("%Y%m")
     first_month = datetime(Date.year, 1, 1)
-    FirstMonth=first_month.strftime("%Y-%m")
+    FirstMonth=first_month.strftime("%Y%m")
     try:
         Date_last_year = Date.replace(year=Date.year - 1)
-        DateMonth_last_year= Date_last_year.month
+        DateMonth_last_year = Date_last_year.strftime("%Y%m")
         first_month_last_year = datetime(Date_last_year.year, 1, 1)
-        FirstMonth_last_year=first_month_last_year.strftime("%Y-%m")
+        FirstMonth_last_year=first_month_last_year.strftime("%Y%m")
     except ValueError:
         # 如果是 2/29 會錯誤，可以退一天
         Date_last_year = Date.replace(year=Date.year - 1, day=28)
-        DateMonth_last_year= Date_last_year.month
+        DateMonth_last_year = Date_last_year.strftime("%Y%m")
         first_month_last_year = datetime(Date_last_year.year, 1, 1)
-        FirstMonth_last_year=first_month_last_year.strftime("%Y-%m")
+        FirstMonth_last_year=first_month_last_year.strftime("%Y%m")
     cursor.execute("SELECT store_id, total_amt ,total_customer,sales_count,DATE FROM kingza_api.dbo.SalesAggregate WHERE DATE = ?", (Date,))
     dsc = cursor.fetchall()
     cursor.execute("SELECT store_id, total_amt ,total_customer,sales_count,DATE FROM kingza_api.dbo.SalesAggregate WHERE DATE = ?", (Date_last_year,))
@@ -140,32 +140,32 @@ def getdailydata(User,Date):
             "dsc_total_amt": safe_float(dsc_row[1]),
             "dsc_total_customer": safe_int(dsc_row[2]),
             "dsc_sales_count": safe_int(dsc_row[3]),
-            "dsc_date": dsc_row[4].isoformat() if dsc_row[4] else None,
+            
             
             "dsp_total_amt": safe_float(dsp_row[1]),
             "dsp_total_customer": safe_int(dsp_row[2]),
             "dsp_sales_count": safe_int(dsp_row[3]),
-            "dsp_date": dsp_row[4].isoformat() if dsp_row[4] else None,
+            
 
             "msc_total_amt": safe_float(msc_row[1]),
             "msc_total_customer": safe_int(msc_row[2]),
             "msc_sales_count": safe_int(msc_row[3]),
-            "msc_date": msc_row[4].isoformat() if msc_row[4] else None,
+            
 
             "msp_total_amt": safe_float(msp_row[1]),
             "msp_total_customer": safe_int(msp_row[2]),
             "msp_sales_count": safe_int(msp_row[3]),
-            "msp_date": msp_row[4].isoformat() if msp_row[4] else None,
+            
 
             "ysc_total_amt": safe_float(ysc_row[1]),
             "ysc_total_customer": safe_int(ysc_row[2]),
             "ysc_sales_count": safe_int(ysc_row[3]),
-            "ysc_date": ysc_row[4].isoformat() if ysc_row[4] else None,
+            
 
             "ysp_total_amt": safe_float(ysp_row[1]),
             "ysp_total_customer": safe_int(ysp_row[2]),
             "ysp_sales_count": safe_int(ysp_row[3]),
-            "ysp_date": ysp_row[4].isoformat() if ysp_row[4] else None,
+            
         })
     data = []
     for r in result:
@@ -442,55 +442,55 @@ def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料ex
             ws[f"D{row}"] = r[3]
             ws[f"D{row}"].number_format = "#,##0"
             ws[f"E{row}"] = r[4]
-            ws[f"E{row}"].number_format = "#,##0"
+            ws[f"E{row}"].number_format = "#,##0.00;-#,##0.00;0"
             ws[f"F{row}"] = r[5]
             ws[f"F{row}"].number_format = "#,##0"
             ws[f"G{row}"] = r[6]
             ws[f"G{row}"].number_format = "#,##0"
             ws[f"H{row}"] = r[7]
-            ws[f"H{row}"].number_format = "#,##0"
+            ws[f"H{row}"].number_format = "#,##0.00;-#,##0.00;0"
             ws[f"I{row}"] = r[8]
             ws[f"I{row}"].number_format = "#,##0"
             ws[f"J{row}"] = r[9]
             ws[f"J{row}"].number_format = "#,##0"
             ws[f"K{row}"] = r[10]
-            ws[f"K{row}"].number_format = "#,##0"
+            ws[f"K{row}"].number_format = "#,##0.00;-#,##0.00;0"
             ws[f"L{row}"] = r[11]
             ws[f"L{row}"].number_format = "#,##0"
             ws[f"M{row}"] = r[12]
             ws[f"M{row}"].number_format = "#,##0"
             ws[f"N{row}"] = r[13]
-            ws[f"N{row}"].number_format = "#,##0"
+            ws[f"N{row}"].number_format = "#,##0.00;-#,##0.00;0"
             ws[f"O{row}"] = r[14]
             ws[f"O{row}"].number_format = "#,##0"
             ws[f"P{row}"] = r[15]
             ws[f"P{row}"].number_format = "#,##0"
             ws[f"Q{row}"] = r[16]
-            ws[f"Q{row}"].number_format = "#,##0"
+            ws[f"Q{row}"].number_format = "#,##0.00;-#,##0.00;0"
             ws[f"R{row}"] = r[17]
             ws[f"R{row}"].number_format = "#,##0"
             ws[f"S{row}"] = r[18]
             ws[f"S{row}"].number_format = "#,##0"
             ws[f"T{row}"] = r[19]
-            ws[f"T{row}"].number_format = "#,##0"
+            ws[f"T{row}"].number_format = "#,##0.00;-#,##0.00;0"
             ws[f"U{row}"] = r[20]
             ws[f"U{row}"].number_format = "#,##0"
             ws[f"V{row}"] = r[21]
             ws[f"V{row}"].number_format = "#,##0"
             ws[f"W{row}"] = r[22]
-            ws[f"W{row}"].number_format = "#,##0"
+            ws[f"W{row}"].number_format = "#,##0.00;-#,##0.00;0"
             ws[f"X{row}"] = r[23]
             ws[f"X{row}"].number_format = "#,##0"
             ws[f"Y{row}"] = r[24]
             ws[f"Y{row}"].number_format = "#,##0"
             ws[f"Z{row}"] = r[25]
-            ws[f"Z{row}"].number_format = "#,##0"
+            ws[f"Z{row}"].number_format = "#,##0.00;-#,##0.00;0"
             ws[f"AA{row}"] = r[26]
             ws[f"AA{row}"].number_format = "#,##0"
             ws[f"AB{row}"] = r[27]
             ws[f"AB{row}"].number_format = "#,##0"
             ws[f"AC{row}"] = r[28]
-            ws[f"AC{row}"].number_format = "#,##0"
+            ws[f"AC{row}"].number_format = "#,##0.00;-#,##0.00;0"
             row += 1
 
         # 美化欄寬
@@ -888,9 +888,9 @@ scheduler = BackgroundScheduler()
 current_job = None
 scheduler.add_job(update_job, 'interval', minutes=1)
 scheduler.start()
-day = datetime.today().strftime("%Y-%m-%d")
-data=getdailydata('A14176',day)
-excelmake('A14176',day,data,5)
+# day = datetime.today().strftime("%Y-%m-%d")
+# data=getdailydata('A14176',day)
+# excelmake('A14176',day,data,5)
 # day = datetime.today().strftime("%Y-%m-%d")
 # data=getdailydata("A14176",day)
 # excelmake('A14176',day,data,5)
