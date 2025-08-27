@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify,send_from_directory
 import json
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from datetime import datetime
+from datetime import datetime, timedelta
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
@@ -29,7 +29,7 @@ app = Flask(__name__)
 # ===== LINE 設定 =====
 CHANNEL_ACCESS_TOKEN = os.getenv('CHANNEL_ACCESS_TOKEN')  # Messaging API Channel Access Token
 CHANNEL_SECRET = os.getenv('CHANNEL_SECRET')
-
+# ===== 路徑 設定 =====
 TEMP='temp'
 PNG='static/img'
 FOLDER='static/file'
@@ -40,10 +40,8 @@ configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 api_client = ApiClient(configuration)
 line_bot_api = MessagingApi(api_client)
-
-last_setting={"hour": 9, "minute": 0} 
 # ===== 全域資料 =====
-
+last_setting={"hour": 9, "minute": 0} 
 settings = {"hour": 9, "minute": 0}  # 每日推送時間
 def safe_float(val):
     return float(val) if val is not None else 0.0
@@ -239,7 +237,8 @@ def update_job():
     #print(last_setting)
 def send_message():
     """發送訊息任務"""
-    day = datetime.today().strftime("%Y-%m-%d")
+    #day = datetime.today().strftime("%Y-%m-%d")
+    day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
     with open("permissions.json", "r", encoding="utf-8") as f:
         permissions = json.load(f)
     for per in permissions:
@@ -716,7 +715,6 @@ def callback():
 
     return 'OK'
 # 發送檔案下載連結
-
 def send_excel_button(user_id, file_name,day):
     with open("settings.json", "r", encoding="utf-8") as f:
         setting = json.load(f)
@@ -827,21 +825,17 @@ def handle_message(event):
                     messages=[TextMessage(text=text)]
                     )
             )
-    elif user_text=='Data':
-        data = [
-            ["全品牌", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["Total", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["勝牛蘭城新月", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["王將信義威秀", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["杏子廣三SOGO", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["橋村板橋環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["杏子高雄義大", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-            ["杏子左營環球", 19094808, "", "", 28896, "", "", 661, "", "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", "", 28896, "", "", 661, "", 661],
-        ]
+    elif user_text[:2] == "資料":
+        date_str=user_text[2:10]    
+        for per in permissions:
+            if user_id == per['LINE']:
+                user_id=per['user_id']
+                user_id_LINE=per['LINE']
+                day = datetime.strptime(date_str, "%Y%m%d").strftime("%Y-%m-%d")
+                data=getdailydata(user_id,day)
+                file_name=excelmake(user_id,day,data,start=5)
+                send_excel_button(user_id_LINE, file_name,day)
 
-        excelmake("A14176",'2025-08-10',data,5)
-        date='2025-08-10'
-        send_excel_button('Ue8115fd6e2a0ffb3170fa8a0949ce4b9',f'{date}daily_report.xlsx',date)
 
 
 # ====== 使用者加好友事件 (FollowEvent) ======
@@ -891,9 +885,11 @@ scheduler.start()
 # day = datetime.today().strftime("%Y-%m-%d")
 # data=getdailydata('A14176',day)
 # excelmake('A14176',day,data,5)
-# day = datetime.today().strftime("%Y-%m-%d")
-# data=getdailydata("A14176",day)
-# excelmake('A14176',day,data,5)
+#day = datetime.today().strftime("%Y-%m-%d")
+
+day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+data=getdailydata("A14176",day)
+excelmake('A14176',day,data,5)
 
 #使用FLASK啟動須解除，目前以Gunicorn啟動
 # if __name__ == "__main__":
