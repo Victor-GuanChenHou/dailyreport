@@ -74,24 +74,64 @@ def getdailydata(User,Date):
     )
     cursor = conn.cursor()
     Date = datetime.strptime(Date, "%Y-%m-%d")
+    DateMonth= Date.month
+    first_month = datetime(Date.year, 1, 1)
+    FirstMonth=first_month.strftime("%Y-%m")
     try:
         Date_last_year = Date.replace(year=Date.year - 1)
+        DateMonth_last_year= Date_last_year.month
+        first_month_last_year = datetime(Date_last_year.year, 1, 1)
+        FirstMonth_last_year=first_month_last_year.strftime("%Y-%m")
     except ValueError:
         # 如果是 2/29 會錯誤，可以退一天
         Date_last_year = Date.replace(year=Date.year - 1, day=28)
+        DateMonth_last_year= Date_last_year.month
+        first_month_last_year = datetime(Date_last_year.year, 1, 1)
+        FirstMonth_last_year=first_month_last_year.strftime("%Y-%m")
     cursor.execute("SELECT store_id, total_amt ,total_customer,sales_count,DATE FROM kingza_api.dbo.SalesAggregate WHERE DATE = ?", (Date,))
     dsc = cursor.fetchall()
     cursor.execute("SELECT store_id, total_amt ,total_customer,sales_count,DATE FROM kingza_api.dbo.SalesAggregate WHERE DATE = ?", (Date_last_year,))
     dsp=cursor.fetchall()
+    cursor.execute("SELECT store_id, total_amt ,total_customer,sales_count,Month FROM kingza_api.dbo.SalesAggregateByMonth WHERE Month = ?", (DateMonth,))
+    msc=cursor.fetchall()
+    cursor.execute("SELECT store_id, total_amt ,total_customer,sales_count,Month FROM kingza_api.dbo.SalesAggregateByMonth WHERE Month = ?", (DateMonth_last_year,))
+    msp=cursor.fetchall()
+    cursor.execute("""
+        SELECT store_id,
+            SUM(total_amt) AS total_amt,
+            SUM(total_customer) AS total_customer,
+            SUM(sales_count) AS sales_count
+        FROM kingza_api.dbo.SalesAggregateByMonth
+        WHERE Month >= ? AND Month <= ?
+        GROUP BY store_id;
+    """, (FirstMonth, DateMonth))
+    ysc=cursor.fetchall()
+    cursor.execute("""
+        SELECT store_id,
+            SUM(total_amt) AS total_amt,
+            SUM(total_customer) AS total_customer,
+            SUM(sales_count) AS sales_count
+        FROM kingza_api.dbo.SalesAggregateByMonth
+        WHERE Month >= ? AND Month <= ?
+        GROUP BY store_id;
+    """, (FirstMonth_last_year, DateMonth_last_year))
+    ysp=cursor.fetchall()
     store_map = {s['value']: s for s in stores}
     dsc_map = {row[0]: row for row in dsc}
     dsp_map = {row[0]: row for row in dsp}
+    msc_map = {row[0]: row for row in msc}
+    msp_map = {row[0]: row for row in msp}
+    ysc_map = {row[0]: row for row in ysc}
+    ysp_map = {row[0]: row for row in ysp}
     result=[]
     for store_id in depart :
         store_info = store_map.get(store_id, {})
         dsc_row = dsc_map.get(store_id, (store_id, 0, 0, 0, None))
         dsp_row = dsp_map.get(store_id, (store_id, 0, 0, 0, None))
-        
+        msc_row = msc_map.get(store_id, (store_id, 0, 0, 0, None))
+        msp_row = msp_map.get(store_id, (store_id, 0, 0, 0, None))
+        ysc_row = ysc_map.get(store_id, (store_id, 0, 0, 0, None))
+        ysp_row = ysp_map.get(store_id, (store_id, 0, 0, 0, None))
         result.append({
             "store_id": store_id,
             "store_name": store_info.get("name", ""),
@@ -106,6 +146,26 @@ def getdailydata(User,Date):
             "dsp_total_customer": safe_int(dsp_row[2]),
             "dsp_sales_count": safe_int(dsp_row[3]),
             "dsp_date": dsp_row[4].isoformat() if dsp_row[4] else None,
+
+            "msc_total_amt": safe_float(msc_row[1]),
+            "msc_total_customer": safe_int(msc_row[2]),
+            "msc_sales_count": safe_int(msc_row[3]),
+            "msc_date": msc_row[4].isoformat() if msc_row[4] else None,
+
+            "msp_total_amt": safe_float(msp_row[1]),
+            "msp_total_customer": safe_int(msp_row[2]),
+            "msp_sales_count": safe_int(msp_row[3]),
+            "msp_date": msp_row[4].isoformat() if msp_row[4] else None,
+
+            "ysc_total_amt": safe_float(ysc_row[1]),
+            "ysc_total_customer": safe_int(ysc_row[2]),
+            "ysc_sales_count": safe_int(ysc_row[3]),
+            "ysc_date": ysc_row[4].isoformat() if ysc_row[4] else None,
+
+            "ysp_total_amt": safe_float(ysp_row[1]),
+            "ysp_total_customer": safe_int(ysp_row[2]),
+            "ysp_sales_count": safe_int(ysp_row[3]),
+            "ysp_date": ysp_row[4].isoformat() if ysp_row[4] else None,
         })
     data = []
     for r in result:
@@ -127,28 +187,29 @@ def getdailydata(User,Date):
             r["dsc_sales_count"] / r["dsp_sales_count"] if r["dsp_sales_count"] else None,  # 比例
 
             #################################################################
-            r["dsc_total_amt"],              # dsc 總額
-            r["dsp_total_amt"],              # dsp 總額
-            r["dsc_total_amt"] / r["dsp_total_amt"] if r["dsp_total_amt"] else None,  # 比例
+            r["msc_total_amt"],              # msc 總額
+            r["msp_total_amt"],              # msp 總額
+            r["msc_total_amt"] / r["msp_total_amt"] if r["msp_total_amt"] else None,  # 比例
             
-            r["dsc_total_customer"],         # dsc 總客數
-            r["dsp_total_customer"],         # dsp 總客數
-            r["dsc_total_customer"] / r["dsp_total_customer"] if r["dsp_total_customer"] else None,  # 比例
+            r["msc_total_customer"],         # msc 總客數
+            r["msp_total_customer"],         # msp 總客數
+            r["msc_total_customer"] / r["msp_total_customer"] if r["msp_total_customer"] else None,  # 比例
             
-            r["dsc_sales_count"],            # dsc 銷售筆數
-            r["dsp_sales_count"],            # dsp 銷售筆數
-            r["dsc_sales_count"] / r["dsp_sales_count"] if r["dsp_sales_count"] else None,  # 比例
-            r["dsc_total_amt"],              # dsc 總額
-            r["dsp_total_amt"],              # dsp 總額
-            r["dsc_total_amt"] / r["dsp_total_amt"] if r["dsp_total_amt"] else None,  # 比例
+            r["msc_sales_count"],            # msc 銷售筆數
+            r["msp_sales_count"],            # msp 銷售筆數
+            r["msc_sales_count"] / r["msp_sales_count"] if r["msp_sales_count"] else None,  # 比例
+            #################################################################################
+            r["ysc_total_amt"],              # dsc 總額
+            r["ysp_total_amt"],              # dsp 總額
+            r["ysc_total_amt"] / r["ysp_total_amt"] if r["ysp_total_amt"] else None,  # 比例
             
-            r["dsc_total_customer"],         # dsc 總客數
-            r["dsp_total_customer"],         # dsp 總客數
-            r["dsc_total_customer"] / r["dsp_total_customer"] if r["dsp_total_customer"] else None,  # 比例
+            r["ysc_total_customer"],         # dsc 總客數
+            r["ysp_total_customer"],         # dsp 總客數
+            r["ysc_total_customer"] / r["ysp_total_customer"] if r["ysp_total_customer"] else None,  # 比例
             
-            r["dsc_sales_count"],            # dsc 銷售筆數
-            r["dsp_sales_count"],            # dsp 銷售筆數
-            r["dsc_sales_count"] / r["dsp_sales_count"] if r["dsp_sales_count"] else None,  # 比例
+            r["ysc_sales_count"],            # dsc 銷售筆數
+            r["ysp_sales_count"],            # dsp 銷售筆數
+            r["ysc_sales_count"] / r["ysp_sales_count"] if r["ysp_sales_count"] else None,  # 比例
         ]
        
         data.append(row)
@@ -162,21 +223,19 @@ def update_job():
     setting=settings[0]
     hour = setting.get("hour", 9)
     minute = setting.get("minute", 0)
-    # 判斷是否需要更新 job
+
     
-    if last_setting.get("hour") != hour or last_setting.get("minute") != minute:
-        
-        # 刪掉舊 job
-        if current_job:
-            scheduler.remove_job(current_job.id)
 
-        # 建立新 job
-        trigger = CronTrigger(hour=hour, minute=minute)
-        job = scheduler.add_job(send_message, trigger)
-        print(f"[{datetime.now()}] 更新排程: 每天 {hour}:{minute} 發送訊息")
+    # 刪掉舊 job
+    if current_job:
+        scheduler.remove_job(current_job.id)
+    # 建立新 job
+    trigger = CronTrigger(hour=hour, minute=minute)
+    job = scheduler.add_job(send_message, trigger)
+    print(f"[{datetime.now()}] 更新排程: 每天 {hour}:{minute} 發送訊息")
 
-        last_setting = {"hour": hour, "minute": minute}
-        globals()["current_job"] = job
+    last_setting = {"hour": hour, "minute": minute}
+    globals()["current_job"] = job
     #print(last_setting)
 def send_message():
     """發送訊息任務"""
@@ -829,6 +888,9 @@ scheduler = BackgroundScheduler()
 current_job = None
 scheduler.add_job(update_job, 'interval', minutes=1)
 scheduler.start()
+day = datetime.today().strftime("%Y-%m-%d")
+data=getdailydata('A14176',day)
+excelmake('A14176',day,data,5)
 # day = datetime.today().strftime("%Y-%m-%d")
 # data=getdailydata("A14176",day)
 # excelmake('A14176',day,data,5)
