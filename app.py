@@ -221,9 +221,6 @@ def update_job():
     setting=settings[0]
     hour = setting.get("hour", 9)
     minute = setting.get("minute", 0)
-
-    
-
     # 刪掉舊 job
     if current_job:
         scheduler.remove_job(current_job.id)
@@ -837,6 +834,7 @@ def handle_message(event):
                 data=getdailydata(user_id,day)
                 file_name=excelmake(user_id,day,data,start=5)
                 send_excel_button(user_id_LINE, file_name,day)
+                break
 
       
 
@@ -889,9 +887,9 @@ scheduler.start()
 # excelmake('A14176',day,data,5)
 #day = datetime.today().strftime("%Y-%m-%d")
 
-day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
-data=getdailydata("A14176",day)
-excelmake('A14176',day,data,5)
+# day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+# data=getdailydata("A14176",day)
+# excelmake('A14176',day,data,5)
 
 #使用FLASK啟動須解除，目前以Gunicorn啟動
 # if __name__ == "__main__":
