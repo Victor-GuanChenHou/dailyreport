@@ -1159,12 +1159,12 @@ scheduler.start()
 # excelmake('A14176',day,data,5)
 #day = datetime.today().strftime("%Y-%m-%d")
 
-day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
-day='2026-03-09'
-data=getdailydata("A14176",day)
-excelmake('A14176',day,data,5)
-update_store()
-#使用FLASK啟動須解除，目前以Gunicorn啟動
-if __name__ == "__main__":
+# day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+# day='2026-03-09'
+# data=getdailydata("A14176",day)
+# excelmake('A14176',day,data,5)
+# update_store()
+# #使用FLASK啟動須解除，目前以Gunicorn啟動
+# if __name__ == "__main__":
 
-    app.run(host="0.0.0.0", port=8018)
+#     app.run(host="0.0.0.0", port=8018)
