@@ -50,13 +50,19 @@ def safe_int(val):
 def getdailydata(User,Date):
     with open("store.json", "r", encoding="utf-8") as f:
         stores = json.load(f)
+        
+
     with open("permissions.json", "r", encoding="utf-8") as f:
         permissions = json.load(f)
     depart=[]
     for per in permissions:
         if User==per['user_id']:
-            depart=per['departments']
-            break
+            if per['departments'][0]=='all':
+                depart = [stor['value'] for stor in stores]
+            else:
+                depart=per['departments']
+              
+                break
     load_dotenv()
     Daily_HOST = os.getenv('Daily_HOST')
     Daily_password = os.getenv('Daily_password')
@@ -166,6 +172,39 @@ def getdailydata(User,Date):
             
         })
     data = []
+    D_total={
+            
+            "dsc_total_amt": 0.0,
+            "dsc_total_customer": 0,
+            "dsc_sales_count": 0,
+            
+            
+            "dsp_total_amt": 0,
+            "dsp_total_customer": 0,
+            "dsp_sales_count": 0,
+            
+
+            "msc_total_amt": 0,
+            "msc_total_customer": 0,
+            "msc_sales_count": 0,
+            
+
+            "msp_total_amt": 0,
+            "msp_total_customer": 0,
+            "msp_sales_count": 0,
+            
+
+            "ysc_total_amt": 0,
+            "ysc_total_customer": 0,
+            "ysc_sales_count": 0,
+            
+
+            "ysp_total_amt": 0,
+            "ysp_total_customer": 0,
+            "ysp_sales_count": 0,
+            
+        }
+    totals = {}
     for r in result:
     # 先取得店名或其他欄位
         row = [
@@ -209,9 +248,157 @@ def getdailydata(User,Date):
             r["ysp_sales_count"],            # dsp 銷售筆數
             r["ysc_sales_count"] / r["ysp_sales_count"] if r["ysp_sales_count"] else None,  # 比例
         ]
-       
+        key = f"{r["store_name"][0]}Total" # 取第一個字
+        
+        if key not in totals:
+            totals[key] = {
+            
+                "dsc_total_amt": 0.0,
+                "dsc_total_customer": 0,
+                "dsc_sales_count": 0,
+                
+                
+                "dsp_total_amt": 0,
+                "dsp_total_customer": 0,
+                "dsp_sales_count": 0,
+                
+
+                "msc_total_amt": 0,
+                "msc_total_customer": 0,
+                "msc_sales_count": 0,
+                
+
+                "msp_total_amt": 0,
+                "msp_total_customer": 0,
+                "msp_sales_count": 0,
+                
+
+                "ysc_total_amt": 0,
+                "ysc_total_customer": 0,
+                "ysc_sales_count": 0,
+                
+
+                "ysp_total_amt": 0,
+                "ysp_total_customer": 0,
+                "ysp_sales_count": 0,
+                
+            }
+        totals[key]["dsc_total_amt"] += r["dsc_total_amt"]
+        totals[key]["dsp_total_amt"] += r["dsp_total_amt"]
+        totals[key]["dsc_total_customer"] += r["dsc_total_customer"]
+        totals[key]["dsp_total_customer"] += r["dsp_total_customer"]
+        totals[key]["dsc_sales_count"] += r["dsc_sales_count"]
+        totals[key]["dsp_sales_count"] += r["dsp_sales_count"]
+        ##
+        totals[key]["msc_total_amt"] += r["msc_total_amt"]
+        totals[key]["msp_total_amt"] += r["msp_total_amt"]
+        totals[key]["msc_total_customer"] += r["msc_total_customer"]
+        totals[key]["msp_total_customer"] += r["msp_total_customer"]
+        totals[key]["msc_sales_count"] += r["msc_sales_count"]
+        totals[key]["msp_sales_count"] += r["msp_sales_count"]
+        ##
+        totals[key]["ysc_total_amt"] += r["ysc_total_amt"]
+        totals[key]["ysp_total_amt"] += r["ysp_total_amt"]
+        totals[key]["ysc_total_customer"] += r["ysc_total_customer"]
+        totals[key]["ysp_total_customer"] += r["ysp_total_customer"]
+        totals[key]["ysc_sales_count"] += r["ysc_sales_count"]
+        totals[key]["ysp_sales_count"] += r["ysp_sales_count"]
+        D_total["dsc_total_amt"] = r["dsc_total_amt"] + D_total["dsc_total_amt"]
+        D_total["dsp_total_amt"] = r["dsp_total_amt"] + D_total["dsp_total_amt"]
+        D_total["dsc_total_customer"] = r["dsc_total_customer"] + D_total["dsc_total_customer"]
+        D_total["dsp_total_customer"] = r["dsp_total_customer"] + D_total["dsp_total_customer"]
+        D_total["dsc_sales_count"] = r["dsc_sales_count"] + D_total["dsc_sales_count"]
+        D_total["dsp_sales_count"] = r["dsp_sales_count"] + D_total["dsp_sales_count"]
+        ##
+        D_total["msc_total_amt"] = r["msc_total_amt"] + D_total["msc_total_amt"]
+        D_total["msp_total_amt"] = r["msp_total_amt"] + D_total["msp_total_amt"]
+        D_total["msc_total_customer"] = r["msc_total_customer"] + D_total["msc_total_customer"]
+        D_total["msp_total_customer"] = r["msp_total_customer"] + D_total["msp_total_customer"]
+        D_total["msc_sales_count"] = r["msc_sales_count"] + D_total["msc_sales_count"]
+        D_total["msp_sales_count"] = r["msp_sales_count"] + D_total["msp_sales_count"]
+        ##
+        D_total["ysc_total_amt"] = r["ysc_total_amt"] + D_total["ysc_total_amt"]
+        D_total["ysp_total_amt"] = r["ysp_total_amt"] + D_total["ysp_total_amt"]
+        D_total["ysc_total_customer"] = r["ysc_total_customer"] + D_total["ysc_total_customer"]
+        D_total["ysp_total_customer"] = r["ysp_total_customer"] + D_total["ysp_total_customer"]
+        D_total["ysc_sales_count"] = r["ysc_sales_count"] + D_total["ysc_sales_count"]
+        D_total["ysp_sales_count"] = r["ysp_sales_count"] + D_total["ysp_sales_count"]
+        ##
         data.append(row)
         data.sort(key=lambda x: x[1])
+    # print(key)
+    brand_data=[]
+    for total in totals:
+        
+        brd=[
+            total,                 # 店名
+            '', 
+            totals[total]["dsc_total_amt"],
+            totals[total]["dsp_total_amt"],
+            totals[total]["dsc_total_amt"] / totals[total]["dsp_total_amt"] if totals[total]["dsp_total_amt"] else None,
+            totals[total]["dsc_total_customer"],
+            totals[total]["dsp_total_customer"],
+            totals[total]["dsc_total_customer"] / totals[total]["dsp_total_customer"] if totals[total]["dsp_total_customer"] else None,
+            totals[total]["dsc_sales_count"],
+            totals[total]["dsp_sales_count"],
+            totals[total]["dsc_sales_count"] / totals[total]["dsp_sales_count"] if totals[total]["dsp_sales_count"] else None,
+            totals[total]["msc_total_amt"],
+            totals[total]["msp_total_amt"],
+            totals[total]["msc_total_amt"] / totals[total]["msp_total_amt"] if totals[total]["msp_total_amt"] else None,
+            totals[total]["msc_total_customer"],
+            totals[total]["msp_total_customer"],
+            totals[total]["msc_total_customer"] / totals[total]["msp_total_customer"] if totals[total]["msp_total_customer"] else None,
+            totals[total]["msc_sales_count"],
+            totals[total]["msp_sales_count"],
+            totals[total]["msc_sales_count"] / totals[total]["msp_sales_count"] if totals[total]["msp_sales_count"] else None,
+            totals[total]["ysc_total_amt"],
+            totals[total]["ysp_total_amt"],
+            totals[total]["ysc_total_amt"] / totals[total]["ysp_total_amt"] if totals[total]["ysp_total_amt"] else None,
+            totals[total]["ysc_total_customer"],
+            totals[total]["ysp_total_customer"],
+            totals[total]["ysc_total_customer"] / totals[total]["ysp_total_customer"] if totals[total]["ysp_total_customer"] else None,
+            totals[total]["ysc_sales_count"],
+            totals[total]["ysp_sales_count"],
+            totals[total]["ysc_sales_count"] / totals[total]["ysp_sales_count"] if totals[total]["ysp_sales_count"] else None
+        ]
+        brand_data.append(brd)
+    for i in range(len(brand_data)): 
+        data.insert(0, brand_data[i])
+    D_TOTAL_DATA=[
+        'Total',                 # 店名
+        '',     
+        D_total["dsc_total_amt"],
+        D_total["dsp_total_amt"],
+        D_total["dsc_total_amt"] / D_total["dsp_total_amt"] if D_total["dsp_total_amt"] else None,
+        D_total["dsc_total_customer"],
+        D_total["dsp_total_customer"],
+        D_total["dsc_total_customer"] / D_total["dsp_total_customer"] if D_total["dsp_total_customer"] else None,
+        D_total["dsc_sales_count"],
+        D_total["dsp_sales_count"],
+        D_total["dsc_sales_count"] / D_total["dsp_sales_count"] if D_total["dsp_sales_count"] else None,
+        D_total["msc_total_amt"],
+        D_total["msp_total_amt"],
+        D_total["msc_total_amt"] / D_total["msp_total_amt"] if D_total["msp_total_amt"] else None,
+        D_total["msc_total_customer"],
+        D_total["msp_total_customer"],
+        D_total["msc_total_customer"] / D_total["msp_total_customer"] if D_total["msp_total_customer"] else None,
+        D_total["msc_sales_count"],
+        D_total["msp_sales_count"],
+        D_total["msc_sales_count"] / D_total["msp_sales_count"] if D_total["msp_sales_count"] else None,
+        D_total["ysc_total_amt"],
+        D_total["ysp_total_amt"],
+        D_total["ysc_total_amt"] / D_total["ysp_total_amt"] if D_total["ysp_total_amt"] else None,
+        D_total["ysc_total_customer"],
+        D_total["ysp_total_customer"],
+        D_total["ysc_total_customer"] / D_total["ysp_total_customer"] if D_total["ysp_total_customer"] else None,
+        D_total["ysc_sales_count"],
+        D_total["ysp_sales_count"],
+        D_total["ysc_sales_count"] / D_total["ysp_sales_count"] if D_total["ysp_sales_count"] else None,
+    ]
+    
+    # data[0].append(D_TOTAL_DATA)
+    # print(data)
+    data.insert(0, D_TOTAL_DATA)
     return data      
 def update_job():
     """檢查設定是否改變，更新排程"""
@@ -232,8 +419,86 @@ def update_job():
     last_setting = {"hour": hour, "minute": minute}
     globals()["current_job"] = job
     #print(last_setting)
+def update_store():
+        load_dotenv()
+        Daily_HOST = os.getenv('HRDB_host')
+        Daily_password = os.getenv('HRDB_password')
+        Daily_uid=os.getenv('HRDB_uid')
+        Daily_name=os.getenv('HRDB_name')
+        conn = pyodbc.connect(
+            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"SERVER={Daily_HOST};"
+            f"DATABASE={Daily_name};"
+            f"UID={Daily_uid};"
+            f"PWD={Daily_password};"
+            "Trusted_Connection=no;"
+        )
+        cursor = conn.cursor()
+        
+        sql_query = """
+        SELECT 
+            
+            D.[DEP_NAME] AS [部門名稱],
+            E.[HECNAME] AS [主管姓名]
+        FROM [HRM].[dbo].[HRUSER_DEPT_BAS] AS D
+        INNER JOIN [HRM].[dbo].[HRUSER] AS E 
+            ON D.[DEP_CHIEF] = E.[EMPID]
+        WHERE 
+            D.CPNYID = '42756204'
+            AND D.DEP_DISABLE != 'Y'
+            AND D.DEP_TYPE = '11'
+            AND EXISTS (
+                SELECT 1 
+                FROM [HRM].[dbo].[HRUSER] AS U
+                WHERE U.DEPT_NO = D.DEP_NO 
+                AND U.STATE = 'A'
+            )
+        """
+        
+        cursor.execute(sql_query)
+        # 轉換為字典格式： { "部門名稱": "主管姓名" }
+        rows = cursor.fetchall()
+        sql_store = {row[0].strip(): row[1].strip() for row in rows}
+        
+        cursor.close()
+        conn.close()
+
+        with open("store.json", "r", encoding="utf-8") as f:
+            stores = json.load(f)
+        updated_stores = []
+        processed_names = set()
+
+        # A. 處理「更新」與「刪除」
+        # 遍歷舊資料，如果 SQL 裡還有這間店就保留並更新主管，否則就捨棄(刪除)
+        for stor in stores:
+            name = stor["name"]
+            if name in sql_store:
+                stor["dept"] = sql_store[name]  # 更新主管姓名
+                updated_stores.append(stor)
+                processed_names.add(name)
+            # else: SQL 沒這間店了，不加入 updated_stores 達成自動刪除
+
+        # B. 處理「新增」
+        # 檢查 SQL 裡有哪些店是原本 JSON 裡沒有的
+        for dept_name, chief_name in sql_store.items():
+            if dept_name not in processed_names:
+                new_item = {
+                    "value": "",  # 依需求給空字串
+                    "name": dept_name,
+                    "dept": chief_name
+                }
+                updated_stores.append(new_item)
+        # C. 寫回檔案
+        
+        with open("store.json", "w", encoding="utf-8") as f:
+            json.dump(updated_stores, f, ensure_ascii=False, indent=4)
+        
 def send_message():
     """發送訊息任務"""
+    try:
+        update_store()
+    except:
+        pass
     #day = datetime.today().strftime("%Y-%m-%d")
     day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
     with open("permissions.json", "r", encoding="utf-8") as f:
@@ -279,14 +544,19 @@ def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料ex
         brand = store_name[:1]  # 前兩個字當品牌
         if brand in brand_map:
             rowname = brand_map[brand]
-            if store_name.endswith("Total"):  # 統一處理Total排前面
-                new_row = row.copy()  # 避免直接改原始 data
-                new_row[0] = "Total"
-                brand_data[rowname].insert(0, new_row)
-            else:
-                brand_data[rowname].append(row)
+            # if store_name.endswith("Total"):  # 統一處理Total排前面
+            #     new_row = row.copy()  # 避免直接改原始 data
+            #     new_row[0] = "Total"
+            #     brand_data[rowname].insert(0, new_row)
+            # else:
+            brand_data[rowname].append(row)
         else:
-            otherdata.append(row)
+            if store_name.endswith("Total"):
+                otherdata.append(row)
+    
+    for brand ,stores in brand_data.items():
+        brand_data[brand].insert(0, otherdata[0])
+    
         # if brand=='杏':
         #     rowname='杏子豬排'
         #     brand_data[rowname].append(row)
@@ -577,7 +847,9 @@ def index():
         permissions = json.load(f)
     with open("store.json", "r", encoding="utf-8") as f:
         stores = json.load(f)
-    
+    alldata={}
+    stores.append({'value': 'all', 'name': '全門市', 'dept': '全門市'})
+   
 
     return render_template("index.html", permissions=permissions,stores=stores,settings=settings)
 @app.route("/adduser", methods=['POST'])
@@ -665,8 +937,8 @@ def editstore():
         store = json.load(f)
     data = request.get_json()
     for per in store:
-        if per['value']==data['value']:
-            per['name']=data['name']
+        if per['name']==data['name']:
+            per['value']=data['value']
             per['dept']=data['dept']
             break
     with open("store.json", "w", encoding="utf-8") as f:
@@ -887,11 +1159,12 @@ scheduler.start()
 # excelmake('A14176',day,data,5)
 #day = datetime.today().strftime("%Y-%m-%d")
 
-# day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
-# data=getdailydata("A14176",day)
-# excelmake('A14176',day,data,5)
-
+day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+day='2026-03-09'
+data=getdailydata("A14176",day)
+excelmake('A14176',day,data,5)
+update_store()
 #使用FLASK啟動須解除，目前以Gunicorn啟動
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
-#     app.run(host="0.0.0.0", port=8018)
+    app.run(host="0.0.0.0", port=8018)
