@@ -128,6 +128,90 @@ def getdailydata(User,Date):
     ysc_map = {row[0]: row for row in ysc}
     ysp_map = {row[0]: row for row in ysp}
     result=[]
+    with open("brand.json", "r", encoding="utf-8") as f:
+        brand_data = json.load(f)
+    with open("store.json", "r", encoding="utf-8") as f:
+        stores = json.load(f)
+    key_brand={}
+    for brand in brand_data:
+        target_id=brand['brand_id']
+            
+        filtered_stores = [stor["value"] for stor in stores if stor["value"].startswith(target_id)]   
+        placeholders = ', '.join(['?'] * len(filtered_stores))
+        sql_query = f"""
+            SELECT SUM(total_amt) AS total_amt,
+            SUM(total_customer) AS total_customer,
+            SUM(sales_count) AS sales_count
+            FROM kingza_api.dbo.SalesAggregate 
+            WHERE DATE = ? AND store_id IN ({placeholders})
+        """
+        params = [Date] + filtered_stores
+        cursor.execute(sql_query, params)
+        dsc_total = cursor.fetchall()
+        params = [Date_last_year] + filtered_stores
+        cursor.execute(sql_query, params)
+        dsp_total = cursor.fetchall()
+        sql_query = f"""
+            SELECT SUM(total_amt) AS total_amt,
+            SUM(total_customer) AS total_customer,
+            SUM(sales_count) AS sales_count
+            FROM kingza_api.dbo.SalesAggregateByMonth 
+            WHERE Month = ? AND store_id IN ({placeholders})
+        """
+        params = [DateMonth] + filtered_stores
+        cursor.execute(sql_query, params)
+        msc_total = cursor.fetchall()
+        params = [DateMonth_last_year] + filtered_stores
+        cursor.execute(sql_query, params)
+        msp_total = cursor.fetchall()
+        sql_query = f"""
+            SELECT SUM(total_amt) AS total_amt,
+            SUM(total_customer) AS total_customer,
+            SUM(sales_count) AS sales_count
+            FROM kingza_api.dbo.SalesAggregateByMonth 
+            WHERE Month >= ? AND Month <= ? AND store_id IN ({placeholders})
+        """
+        params = [FirstMonth] +[DateMonth]+ filtered_stores
+        cursor.execute(sql_query, params)
+        ysc_total = cursor.fetchall()
+        params = [FirstMonth_last_year] +[DateMonth_last_year]+ filtered_stores
+        cursor.execute(sql_query, params)
+        ysp_total = cursor.fetchall()
+
+        cpdata={
+            "dsc_total_amt": safe_float(dsc_total[0][0]),
+            "dsc_total_customer": safe_int(dsc_total[0][1]),
+            "dsc_sales_count": safe_int(dsc_total[0][2]),
+            
+            
+            "dsp_total_amt": safe_float(dsp_total[0][0]),
+            "dsp_total_customer": safe_int(dsp_total[0][1]),
+            "dsp_sales_count": safe_int(dsp_total[0][2]),
+            
+
+            "msc_total_amt": safe_float(msc_total[0][0]),
+            "msc_total_customer": safe_int(msc_total[0][1]),
+            "msc_sales_count": safe_int(msc_total[0][2]),
+            
+
+            "msp_total_amt": safe_float(msp_total[0][0]),
+            "msp_total_customer": safe_int(msp_total[0][1]),
+            "msp_sales_count": safe_int(msp_total[0][2]),
+            
+
+            "ysc_total_amt": safe_float(ysc_total[0][0]),
+            "ysc_total_customer": safe_int(ysc_total[0][1]),
+            "ysc_sales_count": safe_int(ysc_total[0][2]),
+            
+
+            "ysp_total_amt": safe_float(ysp_total[0][0]),
+            "ysp_total_customer": safe_int(ysp_total[0][1]),
+            "ysp_sales_count": safe_int(ysp_total[0][2])
+        }
+        key_brand[brand['brand_name']]=cpdata
+        
+
+    
     for store_id in depart :
         store_info = store_map.get(store_id, {})
         dsc_row = dsc_map.get(store_id, (store_id, 0, 0, 0, None))
@@ -205,6 +289,7 @@ def getdailydata(User,Date):
             
         }
     totals = {}
+    keys=[]
     for r in result:
     # 先取得店名或其他欄位
         row = [
@@ -249,87 +334,104 @@ def getdailydata(User,Date):
             r["ysc_sales_count"] / r["ysp_sales_count"] if r["ysp_sales_count"] else None,  # 比例
         ]
         key = f"{r["store_name"][0]}Total" # 取第一個字
-        
+        # if key not in keys:
+        #     keys.append(key)
+        #     target_id=[]
+        #     with open("brand.json", "r", encoding="utf-8") as f:
+        #         brand_data = json.load(f)
+        #     for brand in brand_data:
+        #         if key == brand['brand_name']:
+        #             target_id=brand['brand_id']
+        #     with open("store.json", "r", encoding="utf-8") as f:
+        #         stores = json.load(f)
+        #     filtered_stores = [
+        #         stor["value"] for stor in stores 
+        #         if stor["value"].startswith(target_id)
+        #     ]    
+        #     print(filtered_stores)
         if key not in totals:
             totals[key] = {
             
-                "dsc_total_amt": 0.0,
-                "dsc_total_customer": 0,
-                "dsc_sales_count": 0,
+                "dsc_total_amt": key_brand[key]['dsc_total_amt'],
+                "dsc_total_customer": key_brand[key]['dsc_total_customer'],
+                "dsc_sales_count": key_brand[key]['dsc_sales_count'],
                 
                 
-                "dsp_total_amt": 0,
-                "dsp_total_customer": 0,
-                "dsp_sales_count": 0,
-                
-
-                "msc_total_amt": 0,
-                "msc_total_customer": 0,
-                "msc_sales_count": 0,
+                "dsp_total_amt": key_brand[key]['dsp_total_amt'],
+                "dsp_total_customer": key_brand[key]['dsp_total_customer'],
+                "dsp_sales_count": key_brand[key]['dsp_sales_count'],
                 
 
-                "msp_total_amt": 0,
-                "msp_total_customer": 0,
-                "msp_sales_count": 0,
+                "msc_total_amt": key_brand[key]['msc_total_amt'],
+                "msc_total_customer": key_brand[key]['msc_total_customer'],
+                "msc_sales_count": key_brand[key]['msc_sales_count'],
                 
 
-                "ysc_total_amt": 0,
-                "ysc_total_customer": 0,
-                "ysc_sales_count": 0,
+                "msp_total_amt": key_brand[key]['msp_total_amt'],
+                "msp_total_customer": key_brand[key]['msp_total_customer'],
+                "msp_sales_count": key_brand[key]['msp_sales_count'],
                 
 
-                "ysp_total_amt": 0,
-                "ysp_total_customer": 0,
-                "ysp_sales_count": 0,
+                "ysc_total_amt": key_brand[key]['ysc_total_amt'],
+                "ysc_total_customer": key_brand[key]['ysc_total_customer'],
+                "ysc_sales_count": key_brand[key]['ysc_sales_count'],
+                
+
+                "ysp_total_amt": key_brand[key]['ysp_total_amt'],
+                "ysp_total_customer": key_brand[key]['ysp_total_customer'],
+                "ysp_sales_count": key_brand[key]['ysp_sales_count'],
                 
             }
-        totals[key]["dsc_total_amt"] += r["dsc_total_amt"]
-        totals[key]["dsp_total_amt"] += r["dsp_total_amt"]
-        totals[key]["dsc_total_customer"] += r["dsc_total_customer"]
-        totals[key]["dsp_total_customer"] += r["dsp_total_customer"]
-        totals[key]["dsc_sales_count"] += r["dsc_sales_count"]
-        totals[key]["dsp_sales_count"] += r["dsp_sales_count"]
-        ##
-        totals[key]["msc_total_amt"] += r["msc_total_amt"]
-        totals[key]["msp_total_amt"] += r["msp_total_amt"]
-        totals[key]["msc_total_customer"] += r["msc_total_customer"]
-        totals[key]["msp_total_customer"] += r["msp_total_customer"]
-        totals[key]["msc_sales_count"] += r["msc_sales_count"]
-        totals[key]["msp_sales_count"] += r["msp_sales_count"]
-        ##
-        totals[key]["ysc_total_amt"] += r["ysc_total_amt"]
-        totals[key]["ysp_total_amt"] += r["ysp_total_amt"]
-        totals[key]["ysc_total_customer"] += r["ysc_total_customer"]
-        totals[key]["ysp_total_customer"] += r["ysp_total_customer"]
-        totals[key]["ysc_sales_count"] += r["ysc_sales_count"]
-        totals[key]["ysp_sales_count"] += r["ysp_sales_count"]
-        D_total["dsc_total_amt"] = r["dsc_total_amt"] + D_total["dsc_total_amt"]
-        D_total["dsp_total_amt"] = r["dsp_total_amt"] + D_total["dsp_total_amt"]
-        D_total["dsc_total_customer"] = r["dsc_total_customer"] + D_total["dsc_total_customer"]
-        D_total["dsp_total_customer"] = r["dsp_total_customer"] + D_total["dsp_total_customer"]
-        D_total["dsc_sales_count"] = r["dsc_sales_count"] + D_total["dsc_sales_count"]
-        D_total["dsp_sales_count"] = r["dsp_sales_count"] + D_total["dsp_sales_count"]
-        ##
-        D_total["msc_total_amt"] = r["msc_total_amt"] + D_total["msc_total_amt"]
-        D_total["msp_total_amt"] = r["msp_total_amt"] + D_total["msp_total_amt"]
-        D_total["msc_total_customer"] = r["msc_total_customer"] + D_total["msc_total_customer"]
-        D_total["msp_total_customer"] = r["msp_total_customer"] + D_total["msp_total_customer"]
-        D_total["msc_sales_count"] = r["msc_sales_count"] + D_total["msc_sales_count"]
-        D_total["msp_sales_count"] = r["msp_sales_count"] + D_total["msp_sales_count"]
-        ##
-        D_total["ysc_total_amt"] = r["ysc_total_amt"] + D_total["ysc_total_amt"]
-        D_total["ysp_total_amt"] = r["ysp_total_amt"] + D_total["ysp_total_amt"]
-        D_total["ysc_total_customer"] = r["ysc_total_customer"] + D_total["ysc_total_customer"]
-        D_total["ysp_total_customer"] = r["ysp_total_customer"] + D_total["ysp_total_customer"]
-        D_total["ysc_sales_count"] = r["ysc_sales_count"] + D_total["ysc_sales_count"]
-        D_total["ysp_sales_count"] = r["ysp_sales_count"] + D_total["ysp_sales_count"]
+        # totals[key]["dsc_total_amt"] += r["dsc_total_amt"]
+        # totals[key]["dsp_total_amt"] += r["dsp_total_amt"]
+        # totals[key]["dsc_total_customer"] += r["dsc_total_customer"]
+        # totals[key]["dsp_total_customer"] += r["dsp_total_customer"]
+        # totals[key]["dsc_sales_count"] += r["dsc_sales_count"]
+        # totals[key]["dsp_sales_count"] += r["dsp_sales_count"]
+        # ##
+        # totals[key]["msc_total_amt"] += r["msc_total_amt"]
+        # totals[key]["msp_total_amt"] += r["msp_total_amt"]
+        # totals[key]["msc_total_customer"] += r["msc_total_customer"]
+        # totals[key]["msp_total_customer"] += r["msp_total_customer"]
+        # totals[key]["msc_sales_count"] += r["msc_sales_count"]
+        # totals[key]["msp_sales_count"] += r["msp_sales_count"]
+        # ##
+        # totals[key]["ysc_total_amt"] += r["ysc_total_amt"]
+        # totals[key]["ysp_total_amt"] += r["ysp_total_amt"]
+        # totals[key]["ysc_total_customer"] += r["ysc_total_customer"]
+        # totals[key]["ysp_total_customer"] += r["ysp_total_customer"]
+        # totals[key]["ysc_sales_count"] += r["ysc_sales_count"]
+        # totals[key]["ysp_sales_count"] += r["ysp_sales_count"]
+        
+        for brand_data in key_brand.values():
+            
+            D_total["dsc_total_amt"] = brand_data.get('dsc_total_amt', 0) + D_total["dsc_total_amt"]
+            D_total["dsp_total_amt"] = brand_data.get('dsp_total_amt', 0) + D_total["dsp_total_amt"]
+            D_total["dsc_total_customer"] = brand_data.get('dsc_total_customer', 0)+ D_total["dsc_total_customer"]
+            D_total["dsp_total_customer"] = brand_data.get('dsp_total_customer', 0)+ D_total["dsp_total_customer"]
+            D_total["dsc_sales_count"] = brand_data.get('dsc_sales_count', 0) + D_total["dsc_sales_count"]
+            D_total["dsp_sales_count"] = brand_data.get('dsp_sales_count', 0)+ D_total["dsp_sales_count"]
+            ##
+            D_total["msc_total_amt"] = brand_data.get('msc_total_amt', 0)+ D_total["msc_total_amt"]
+            D_total["msp_total_amt"] = brand_data.get('msp_total_amt', 0) + D_total["msp_total_amt"]
+            D_total["msc_total_customer"] = brand_data.get('msc_total_customer', 0) + D_total["msc_total_customer"]
+            D_total["msp_total_customer"] = brand_data.get('msp_total_customer', 0)+ D_total["msp_total_customer"]
+            D_total["msc_sales_count"] = brand_data.get('msc_sales_count', 0) + D_total["msc_sales_count"]
+            D_total["msp_sales_count"] = brand_data.get('msp_sales_count', 0) + D_total["msp_sales_count"]
+            ##
+            D_total["ysc_total_amt"] = brand_data.get('ysc_total_amt', 0) + D_total["ysc_total_amt"]
+            D_total["ysp_total_amt"] = brand_data.get('ysp_total_amt', 0) + D_total["ysp_total_amt"]
+            D_total["ysc_total_customer"] = brand_data.get('ysc_total_customer', 0)+ D_total["ysc_total_customer"]
+            D_total["ysp_total_customer"] = brand_data.get('ysp_total_customer', 0)+ D_total["ysp_total_customer"]
+            D_total["ysc_sales_count"] = brand_data.get('ysc_sales_count', 0) + D_total["ysc_sales_count"]
+            D_total["ysp_sales_count"] = brand_data.get('ysp_sales_count', 0) + D_total["ysp_sales_count"]
         ##
         data.append(row)
         data.sort(key=lambda x: x[1])
-    # print(key)
+
     brand_data=[]
     for total in totals:
-        
+        print(total)
         brd=[
             total,                 # 店名
             '', 
@@ -362,6 +464,7 @@ def getdailydata(User,Date):
             totals[total]["ysc_sales_count"] / totals[total]["ysp_sales_count"] if totals[total]["ysp_sales_count"] else None
         ]
         brand_data.append(brd)
+     
     for i in range(len(brand_data)): 
         data.insert(0, brand_data[i])
     D_TOTAL_DATA=[
@@ -399,6 +502,7 @@ def getdailydata(User,Date):
     # data[0].append(D_TOTAL_DATA)
     # print(data)
     data.insert(0, D_TOTAL_DATA)
+
     return data      
 def update_job():
     """檢查設定是否改變，更新排程"""
@@ -1159,10 +1263,10 @@ scheduler.start()
 # excelmake('A14176',day,data,5)
 #day = datetime.today().strftime("%Y-%m-%d")
 
-# day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
-# day='2026-03-09'
-# data=getdailydata("A14176",day)
-# excelmake('A14176',day,data,5)
+day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+day='2026-03-10'
+data=getdailydata("A14176",day)
+excelmake('A14176',day,data,5)
 # update_store()
 # #使用FLASK啟動須解除，目前以Gunicorn啟動
 # if __name__ == "__main__":
