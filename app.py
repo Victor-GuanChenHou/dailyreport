@@ -59,9 +59,10 @@ def getdailydata(User,Date):
         if User==per['user_id']:
             if per['departments'][0]=='all':
                 depart = [stor['value'] for stor in stores]
+                
             else:
                 depart=per['departments']
-              
+               
                 break
     load_dotenv()
     Daily_HOST = os.getenv('Daily_HOST')
@@ -121,6 +122,7 @@ def getdailydata(User,Date):
     """, (FirstMonth_last_year, DateMonth_last_year))
     ysp=cursor.fetchall()
     store_map = {s['value']: s for s in stores}
+    
     dsc_map = {row[0]: row for row in dsc}
     dsp_map = {row[0]: row for row in dsp}
     msc_map = {row[0]: row for row in msc}
@@ -639,6 +641,7 @@ def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料ex
     brand_map = {
         '杏': '杏子豬排',
         '王': '大阪王將',
+        '段': '段存貞',
         '橋': '橋村炸雞',
         '勝': '京都勝牛',
         '雞': '雞三和'
@@ -690,6 +693,7 @@ def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料ex
         # for r in data:
         #     print("   ", r[0])
         # 日期 & 店數
+        
         ws = wb.create_sheet(title=brand)
         ws.merge_cells("A1:B1")
         ws["A1"] = day
