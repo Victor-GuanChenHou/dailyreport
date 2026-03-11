@@ -405,8 +405,11 @@ def getdailydata(User,Date):
         # totals[key]["ysc_sales_count"] += r["ysc_sales_count"]
         # totals[key]["ysp_sales_count"] += r["ysp_sales_count"]
         
-        for brand_data in key_brand.values():
-            
+        
+        data.append(row)
+        data.sort(key=lambda x: x[1])
+    for brand_data in key_brand.values():
+
             D_total["dsc_total_amt"] = brand_data.get('dsc_total_amt', 0) + D_total["dsc_total_amt"]
             D_total["dsp_total_amt"] = brand_data.get('dsp_total_amt', 0) + D_total["dsp_total_amt"]
             D_total["dsc_total_customer"] = brand_data.get('dsc_total_customer', 0)+ D_total["dsc_total_customer"]
@@ -428,12 +431,8 @@ def getdailydata(User,Date):
             D_total["ysc_sales_count"] = brand_data.get('ysc_sales_count', 0) + D_total["ysc_sales_count"]
             D_total["ysp_sales_count"] = brand_data.get('ysp_sales_count', 0) + D_total["ysp_sales_count"]
         ##
-        data.append(row)
-        data.sort(key=lambda x: x[1])
-
     brand_data=[]
     for total in totals:
-        print(total)
         brd=[
             total,                 # 店名
             '', 
