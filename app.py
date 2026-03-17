@@ -43,6 +43,16 @@ line_bot_api = MessagingApi(api_client)
 # ===== 全域資料 =====
 last_setting={"hour": 9, "minute": 0} 
 settings = {"hour": 9, "minute": 0}  # 每日推送時間
+brand_map = {
+        '杏': '杏子豬排',
+        '王': '大阪王將',
+        '段': '段存貞',
+        '橋': '橋村炸雞',
+        '勝': '京都勝牛',
+        '雞': '雞三和',
+        '大': '大阪王將',
+        '京': '京都勝牛'
+    }
 def safe_float(val):
     return float(val) if val is not None else 0.0
 def safe_int(val):
@@ -101,7 +111,6 @@ def getdailydata(User,Date):
     dsp=cursor.fetchall()
     cursor.execute("SELECT store_id, invoice_amt ,total_customer,sales_count,Month FROM kingza_api.dbo.SalesAggregateByMonth WHERE Month = ?", (DateMonth,))
     msc=cursor.fetchall()
-    print(first_month_last_year)
     cursor.execute("""
         SELECT store_id,
             SUM(invoice_amt) AS invoice_amt,
@@ -148,8 +157,10 @@ def getdailydata(User,Date):
     key_brand={}
     for brand in brand_data:
         target_id=brand['brand_id']
-            
         filtered_stores = [stor["value"] for stor in stores if stor["value"].startswith(target_id)]   
+        if target_id=='a03':
+            filtered_stores.append('x03002')
+        print(filtered_stores)
         placeholders = ', '.join(['?'] * len(filtered_stores))
         sql_query = f"""
             SELECT SUM(invoice_amt) AS invoice_amt,
@@ -237,7 +248,7 @@ def getdailydata(User,Date):
             "ysp_sales_count": safe_int(ysp_total[0][2])
         }
         key_brand[brand['brand_name']]=cpdata
-        
+        #print(brand['brand_name'])
 
     
     for store_id in depart :
@@ -361,7 +372,9 @@ def getdailydata(User,Date):
             r["ysp_sales_count"],            # dsp 銷售筆數
             r["ysc_sales_count"] / r["ysp_sales_count"] if r["ysp_sales_count"] else None,  # 比例
         ]
-        key = f"{r["store_name"][0]}Total" # 取第一個字
+        # key = f"{r["store_name"][0]}Total" # 取第一個字
+        key=f"{brand_map[r["store_name"][0]]}Total"
+        #print(brand_map[r["store_name"][0]])
         # if key not in keys:
         #     keys.append(key)
         #     target_id=[]
@@ -378,6 +391,7 @@ def getdailydata(User,Date):
         #     ]    
         #     print(filtered_stores)
         if key not in totals:
+            
             totals[key] = {
             
                 "dsc_invoice_amt": key_brand[key]['dsc_invoice_amt'],
@@ -663,32 +677,27 @@ def excelmake(user_id,day,data,start):#工號 日期資料 完整資料 資料ex
     wb = openpyxl.Workbook()
     brand_data = defaultdict(list)
     otherdata=[]
-    brand_map = {
-        '杏': '杏子豬排',
-        '王': '大阪王將',
-        '段': '段存貞',
-        '橋': '橋村炸雞',
-        '勝': '京都勝牛',
-        '雞': '雞三和'
-    }
+    
     for row in data:
         store_name = row[0]
         brand = store_name[:1]  # 前兩個字當品牌
         if brand in brand_map:
             rowname = brand_map[brand]
+
             # if store_name.endswith("Total"):  # 統一處理Total排前面
             #     new_row = row.copy()  # 避免直接改原始 data
             #     new_row[0] = "Total"
             #     brand_data[rowname].insert(0, new_row)
             # else:
             brand_data[rowname].append(row)
+         
         else:
             if store_name.endswith("Total"):
                 otherdata.append(row)
     
     for brand ,stores in brand_data.items():
         brand_data[brand].insert(0, otherdata[0])
-    
+       
         # if brand=='杏':
         #     rowname='杏子豬排'
         #     brand_data[rowname].append(row)
@@ -1292,10 +1301,10 @@ scheduler.start()
 # excelmake('A14176',day,data,5)
 #day = datetime.today().strftime("%Y-%m-%d")
 
-# day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
-# day='2026-03-15'
-# data=getdailydata("A14176",day)
-# excelmake('A14176',day,data,5)
+day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+day='2026-03-15'
+data=getdailydata("A14176",day)
+excelmake('A14176',day,data,5)
 # update_store()
 # #使用FLASK啟動須解除，目前以Gunicorn啟動
 # if __name__ == "__main__":
