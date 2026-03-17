@@ -84,26 +84,37 @@ def getdailydata(User,Date):
     FirstMonth=first_month.strftime("%Y%m")
     try:
         Date_last_year = Date.replace(year=Date.year - 1)
+        start_of_month_last_year = Date_last_year.replace(day=1)
         DateMonth_last_year = Date_last_year.strftime("%Y%m")
         first_month_last_year = datetime(Date_last_year.year, 1, 1)
         FirstMonth_last_year=first_month_last_year.strftime("%Y%m")
     except ValueError:
         # 如果是 2/29 會錯誤，可以退一天
         Date_last_year = Date.replace(year=Date.year - 1, day=28)
+        start_of_month_last_year = Date_last_year.replace(day=1)
         DateMonth_last_year = Date_last_year.strftime("%Y%m")
         first_month_last_year = datetime(Date_last_year.year, 1, 1)
         FirstMonth_last_year=first_month_last_year.strftime("%Y%m")
-    cursor.execute("SELECT store_id, total_amt ,total_customer,sales_count,DATE FROM kingza_api.dbo.SalesAggregate WHERE DATE = ?", (Date,))
+    cursor.execute("SELECT store_id, invoice_amt ,total_customer,sales_count,DATE FROM kingza_api.dbo.SalesAggregate WHERE DATE = ?", (Date,))
     dsc = cursor.fetchall()
-    cursor.execute("SELECT store_id, total_amt ,total_customer,sales_count,DATE FROM kingza_api.dbo.SalesAggregate WHERE DATE = ?", (Date_last_year,))
+    cursor.execute("SELECT store_id, invoice_amt ,total_customer,sales_count,DATE FROM kingza_api.dbo.SalesAggregate WHERE DATE = ?", (Date_last_year,))
     dsp=cursor.fetchall()
-    cursor.execute("SELECT store_id, total_amt ,total_customer,sales_count,Month FROM kingza_api.dbo.SalesAggregateByMonth WHERE Month = ?", (DateMonth,))
+    cursor.execute("SELECT store_id, invoice_amt ,total_customer,sales_count,Month FROM kingza_api.dbo.SalesAggregateByMonth WHERE Month = ?", (DateMonth,))
     msc=cursor.fetchall()
-    cursor.execute("SELECT store_id, total_amt ,total_customer,sales_count,Month FROM kingza_api.dbo.SalesAggregateByMonth WHERE Month = ?", (DateMonth_last_year,))
+    print(first_month_last_year)
+    cursor.execute("""
+        SELECT store_id,
+            SUM(invoice_amt) AS invoice_amt,
+            SUM(total_customer) AS total_customer,
+            SUM(sales_count) AS sales_count
+        FROM kingza_api.dbo.SalesAggregate
+        WHERE DATE >= ? AND DATE <= ?
+        GROUP BY store_id;
+    """, (start_of_month_last_year,Date_last_year))
     msp=cursor.fetchall()
     cursor.execute("""
         SELECT store_id,
-            SUM(total_amt) AS total_amt,
+            SUM(invoice_amt) AS invoice_amt,
             SUM(total_customer) AS total_customer,
             SUM(sales_count) AS sales_count
         FROM kingza_api.dbo.SalesAggregateByMonth
@@ -113,13 +124,13 @@ def getdailydata(User,Date):
     ysc=cursor.fetchall()
     cursor.execute("""
         SELECT store_id,
-            SUM(total_amt) AS total_amt,
+            SUM(invoice_amt) AS invoice_amt,
             SUM(total_customer) AS total_customer,
             SUM(sales_count) AS sales_count
-        FROM kingza_api.dbo.SalesAggregateByMonth
-        WHERE Month >= ? AND Month <= ?
+        FROM kingza_api.dbo.SalesAggregate
+        WHERE DATE >= ? AND DATE <= ?
         GROUP BY store_id;
-    """, (FirstMonth_last_year, DateMonth_last_year))
+    """, (first_month_last_year,Date_last_year))
     ysp=cursor.fetchall()
     store_map = {s['value']: s for s in stores}
     
@@ -141,7 +152,7 @@ def getdailydata(User,Date):
         filtered_stores = [stor["value"] for stor in stores if stor["value"].startswith(target_id)]   
         placeholders = ', '.join(['?'] * len(filtered_stores))
         sql_query = f"""
-            SELECT SUM(total_amt) AS total_amt,
+            SELECT SUM(invoice_amt) AS invoice_amt,
             SUM(total_customer) AS total_customer,
             SUM(sales_count) AS sales_count
             FROM kingza_api.dbo.SalesAggregate 
@@ -154,7 +165,7 @@ def getdailydata(User,Date):
         cursor.execute(sql_query, params)
         dsp_total = cursor.fetchall()
         sql_query = f"""
-            SELECT SUM(total_amt) AS total_amt,
+            SELECT SUM(invoice_amt) AS invoice_amt,
             SUM(total_customer) AS total_customer,
             SUM(sales_count) AS sales_count
             FROM kingza_api.dbo.SalesAggregateByMonth 
@@ -163,11 +174,18 @@ def getdailydata(User,Date):
         params = [DateMonth] + filtered_stores
         cursor.execute(sql_query, params)
         msc_total = cursor.fetchall()
-        params = [DateMonth_last_year] + filtered_stores
+        sql_query = f"""
+            SELECT SUM(invoice_amt) AS invoice_amt,
+            SUM(total_customer) AS total_customer,
+            SUM(sales_count) AS sales_count
+            FROM kingza_api.dbo.SalesAggregate 
+            WHERE DATE >= ? AND DATE <= ? AND store_id IN ({placeholders})
+        """
+        params = [start_of_month_last_year] +[Date_last_year] + filtered_stores
         cursor.execute(sql_query, params)
         msp_total = cursor.fetchall()
         sql_query = f"""
-            SELECT SUM(total_amt) AS total_amt,
+            SELECT SUM(invoice_amt) AS invoice_amt,
             SUM(total_customer) AS total_customer,
             SUM(sales_count) AS sales_count
             FROM kingza_api.dbo.SalesAggregateByMonth 
@@ -176,37 +194,45 @@ def getdailydata(User,Date):
         params = [FirstMonth] +[DateMonth]+ filtered_stores
         cursor.execute(sql_query, params)
         ysc_total = cursor.fetchall()
-        params = [FirstMonth_last_year] +[DateMonth_last_year]+ filtered_stores
+        sql_query = f"""
+            SELECT SUM(invoice_amt) AS invoice_amt,
+            SUM(total_customer) AS total_customer,
+            SUM(sales_count) AS sales_count
+            FROM kingza_api.dbo.SalesAggregate 
+            WHERE DATE >= ? AND DATE <= ? AND store_id IN ({placeholders})
+        """
+        #print(first_month_last_year,Date_last_year)
+        params = [first_month_last_year] +[Date_last_year]+ filtered_stores
         cursor.execute(sql_query, params)
         ysp_total = cursor.fetchall()
 
         cpdata={
-            "dsc_total_amt": safe_float(dsc_total[0][0]),
+            "dsc_invoice_amt": safe_float(dsc_total[0][0]),
             "dsc_total_customer": safe_int(dsc_total[0][1]),
             "dsc_sales_count": safe_int(dsc_total[0][2]),
             
             
-            "dsp_total_amt": safe_float(dsp_total[0][0]),
+            "dsp_invoice_amt": safe_float(dsp_total[0][0]),
             "dsp_total_customer": safe_int(dsp_total[0][1]),
             "dsp_sales_count": safe_int(dsp_total[0][2]),
             
 
-            "msc_total_amt": safe_float(msc_total[0][0]),
+            "msc_invoice_amt": safe_float(msc_total[0][0]),
             "msc_total_customer": safe_int(msc_total[0][1]),
             "msc_sales_count": safe_int(msc_total[0][2]),
             
 
-            "msp_total_amt": safe_float(msp_total[0][0]),
+            "msp_invoice_amt": safe_float(msp_total[0][0]),
             "msp_total_customer": safe_int(msp_total[0][1]),
             "msp_sales_count": safe_int(msp_total[0][2]),
             
 
-            "ysc_total_amt": safe_float(ysc_total[0][0]),
+            "ysc_invoice_amt": safe_float(ysc_total[0][0]),
             "ysc_total_customer": safe_int(ysc_total[0][1]),
             "ysc_sales_count": safe_int(ysc_total[0][2]),
             
 
-            "ysp_total_amt": safe_float(ysp_total[0][0]),
+            "ysp_invoice_amt": safe_float(ysp_total[0][0]),
             "ysp_total_customer": safe_int(ysp_total[0][1]),
             "ysp_sales_count": safe_int(ysp_total[0][2])
         }
@@ -227,32 +253,32 @@ def getdailydata(User,Date):
             "store_name": store_info.get("name", ""),
             "dept": store_info.get("dept", ""),
             
-            "dsc_total_amt": safe_float(dsc_row[1]),
+            "dsc_invoice_amt": safe_float(dsc_row[1]),
             "dsc_total_customer": safe_int(dsc_row[2]),
             "dsc_sales_count": safe_int(dsc_row[3]),
             
             
-            "dsp_total_amt": safe_float(dsp_row[1]),
+            "dsp_invoice_amt": safe_float(dsp_row[1]),
             "dsp_total_customer": safe_int(dsp_row[2]),
             "dsp_sales_count": safe_int(dsp_row[3]),
             
 
-            "msc_total_amt": safe_float(msc_row[1]),
+            "msc_invoice_amt": safe_float(msc_row[1]),
             "msc_total_customer": safe_int(msc_row[2]),
             "msc_sales_count": safe_int(msc_row[3]),
             
 
-            "msp_total_amt": safe_float(msp_row[1]),
+            "msp_invoice_amt": safe_float(msp_row[1]),
             "msp_total_customer": safe_int(msp_row[2]),
             "msp_sales_count": safe_int(msp_row[3]),
             
 
-            "ysc_total_amt": safe_float(ysc_row[1]),
+            "ysc_invoice_amt": safe_float(ysc_row[1]),
             "ysc_total_customer": safe_int(ysc_row[2]),
             "ysc_sales_count": safe_int(ysc_row[3]),
             
 
-            "ysp_total_amt": safe_float(ysp_row[1]),
+            "ysp_invoice_amt": safe_float(ysp_row[1]),
             "ysp_total_customer": safe_int(ysp_row[2]),
             "ysp_sales_count": safe_int(ysp_row[3]),
             
@@ -260,32 +286,32 @@ def getdailydata(User,Date):
     data = []
     D_total={
             
-            "dsc_total_amt": 0.0,
+            "dsc_invoice_amt": 0.0,
             "dsc_total_customer": 0,
             "dsc_sales_count": 0,
             
             
-            "dsp_total_amt": 0,
+            "dsp_invoice_amt": 0,
             "dsp_total_customer": 0,
             "dsp_sales_count": 0,
             
 
-            "msc_total_amt": 0,
+            "msc_invoice_amt": 0,
             "msc_total_customer": 0,
             "msc_sales_count": 0,
             
 
-            "msp_total_amt": 0,
+            "msp_invoice_amt": 0,
             "msp_total_customer": 0,
             "msp_sales_count": 0,
             
 
-            "ysc_total_amt": 0,
+            "ysc_invoice_amt": 0,
             "ysc_total_customer": 0,
             "ysc_sales_count": 0,
             
 
-            "ysp_total_amt": 0,
+            "ysp_invoice_amt": 0,
             "ysp_total_customer": 0,
             "ysp_sales_count": 0,
             
@@ -298,9 +324,9 @@ def getdailydata(User,Date):
             r["store_name"],                 # 店名
             r["dept"],                       # 區經理
             
-            r["dsc_total_amt"],              # dsc 總額
-            r["dsp_total_amt"],              # dsp 總額
-            r["dsc_total_amt"] / r["dsp_total_amt"] if r["dsp_total_amt"] else None,  # 比例
+            r["dsc_invoice_amt"],              # dsc 總額
+            r["dsp_invoice_amt"],              # dsp 總額
+            r["dsc_invoice_amt"] / r["dsp_invoice_amt"] if r["dsp_invoice_amt"] else None,  # 比例
             
             r["dsc_total_customer"],         # dsc 總客數
             r["dsp_total_customer"],         # dsp 總客數
@@ -311,9 +337,9 @@ def getdailydata(User,Date):
             r["dsc_sales_count"] / r["dsp_sales_count"] if r["dsp_sales_count"] else None,  # 比例
 
             #################################################################
-            r["msc_total_amt"],              # msc 總額
-            r["msp_total_amt"],              # msp 總額
-            r["msc_total_amt"] / r["msp_total_amt"] if r["msp_total_amt"] else None,  # 比例
+            r["msc_invoice_amt"],              # msc 總額
+            r["msp_invoice_amt"],              # msp 總額
+            r["msc_invoice_amt"] / r["msp_invoice_amt"] if r["msp_invoice_amt"] else None,  # 比例
             
             r["msc_total_customer"],         # msc 總客數
             r["msp_total_customer"],         # msp 總客數
@@ -323,9 +349,9 @@ def getdailydata(User,Date):
             r["msp_sales_count"],            # msp 銷售筆數
             r["msc_sales_count"] / r["msp_sales_count"] if r["msp_sales_count"] else None,  # 比例
             #################################################################################
-            r["ysc_total_amt"],              # dsc 總額
-            r["ysp_total_amt"],              # dsp 總額
-            r["ysc_total_amt"] / r["ysp_total_amt"] if r["ysp_total_amt"] else None,  # 比例
+            r["ysc_invoice_amt"],              # dsc 總額
+            r["ysp_invoice_amt"],              # dsp 總額
+            r["ysc_invoice_amt"] / r["ysp_invoice_amt"] if r["ysp_invoice_amt"] else None,  # 比例
             
             r["ysc_total_customer"],         # dsc 總客數
             r["ysp_total_customer"],         # dsp 總客數
@@ -354,52 +380,52 @@ def getdailydata(User,Date):
         if key not in totals:
             totals[key] = {
             
-                "dsc_total_amt": key_brand[key]['dsc_total_amt'],
+                "dsc_invoice_amt": key_brand[key]['dsc_invoice_amt'],
                 "dsc_total_customer": key_brand[key]['dsc_total_customer'],
                 "dsc_sales_count": key_brand[key]['dsc_sales_count'],
                 
                 
-                "dsp_total_amt": key_brand[key]['dsp_total_amt'],
+                "dsp_invoice_amt": key_brand[key]['dsp_invoice_amt'],
                 "dsp_total_customer": key_brand[key]['dsp_total_customer'],
                 "dsp_sales_count": key_brand[key]['dsp_sales_count'],
                 
 
-                "msc_total_amt": key_brand[key]['msc_total_amt'],
+                "msc_invoice_amt": key_brand[key]['msc_invoice_amt'],
                 "msc_total_customer": key_brand[key]['msc_total_customer'],
                 "msc_sales_count": key_brand[key]['msc_sales_count'],
                 
 
-                "msp_total_amt": key_brand[key]['msp_total_amt'],
+                "msp_invoice_amt": key_brand[key]['msp_invoice_amt'],
                 "msp_total_customer": key_brand[key]['msp_total_customer'],
                 "msp_sales_count": key_brand[key]['msp_sales_count'],
                 
 
-                "ysc_total_amt": key_brand[key]['ysc_total_amt'],
+                "ysc_invoice_amt": key_brand[key]['ysc_invoice_amt'],
                 "ysc_total_customer": key_brand[key]['ysc_total_customer'],
                 "ysc_sales_count": key_brand[key]['ysc_sales_count'],
                 
 
-                "ysp_total_amt": key_brand[key]['ysp_total_amt'],
+                "ysp_invoice_amt": key_brand[key]['ysp_invoice_amt'],
                 "ysp_total_customer": key_brand[key]['ysp_total_customer'],
                 "ysp_sales_count": key_brand[key]['ysp_sales_count'],
                 
             }
-        # totals[key]["dsc_total_amt"] += r["dsc_total_amt"]
-        # totals[key]["dsp_total_amt"] += r["dsp_total_amt"]
+        # totals[key]["dsc_invoice_amt"] += r["dsc_invoice_amt"]
+        # totals[key]["dsp_invoice_amt"] += r["dsp_invoice_amt"]
         # totals[key]["dsc_total_customer"] += r["dsc_total_customer"]
         # totals[key]["dsp_total_customer"] += r["dsp_total_customer"]
         # totals[key]["dsc_sales_count"] += r["dsc_sales_count"]
         # totals[key]["dsp_sales_count"] += r["dsp_sales_count"]
         # ##
-        # totals[key]["msc_total_amt"] += r["msc_total_amt"]
-        # totals[key]["msp_total_amt"] += r["msp_total_amt"]
+        # totals[key]["msc_invoice_amt"] += r["msc_invoice_amt"]
+        # totals[key]["msp_invoice_amt"] += r["msp_invoice_amt"]
         # totals[key]["msc_total_customer"] += r["msc_total_customer"]
         # totals[key]["msp_total_customer"] += r["msp_total_customer"]
         # totals[key]["msc_sales_count"] += r["msc_sales_count"]
         # totals[key]["msp_sales_count"] += r["msp_sales_count"]
         # ##
-        # totals[key]["ysc_total_amt"] += r["ysc_total_amt"]
-        # totals[key]["ysp_total_amt"] += r["ysp_total_amt"]
+        # totals[key]["ysc_invoice_amt"] += r["ysc_invoice_amt"]
+        # totals[key]["ysp_invoice_amt"] += r["ysp_invoice_amt"]
         # totals[key]["ysc_total_customer"] += r["ysc_total_customer"]
         # totals[key]["ysp_total_customer"] += r["ysp_total_customer"]
         # totals[key]["ysc_sales_count"] += r["ysc_sales_count"]
@@ -410,22 +436,22 @@ def getdailydata(User,Date):
         data.sort(key=lambda x: x[1])
     for brand_data in key_brand.values():
 
-            D_total["dsc_total_amt"] = brand_data.get('dsc_total_amt', 0) + D_total["dsc_total_amt"]
-            D_total["dsp_total_amt"] = brand_data.get('dsp_total_amt', 0) + D_total["dsp_total_amt"]
+            D_total["dsc_invoice_amt"] = brand_data.get('dsc_invoice_amt', 0) + D_total["dsc_invoice_amt"]
+            D_total["dsp_invoice_amt"] = brand_data.get('dsp_invoice_amt', 0) + D_total["dsp_invoice_amt"]
             D_total["dsc_total_customer"] = brand_data.get('dsc_total_customer', 0)+ D_total["dsc_total_customer"]
             D_total["dsp_total_customer"] = brand_data.get('dsp_total_customer', 0)+ D_total["dsp_total_customer"]
             D_total["dsc_sales_count"] = brand_data.get('dsc_sales_count', 0) + D_total["dsc_sales_count"]
             D_total["dsp_sales_count"] = brand_data.get('dsp_sales_count', 0)+ D_total["dsp_sales_count"]
             ##
-            D_total["msc_total_amt"] = brand_data.get('msc_total_amt', 0)+ D_total["msc_total_amt"]
-            D_total["msp_total_amt"] = brand_data.get('msp_total_amt', 0) + D_total["msp_total_amt"]
+            D_total["msc_invoice_amt"] = brand_data.get('msc_invoice_amt', 0)+ D_total["msc_invoice_amt"]
+            D_total["msp_invoice_amt"] = brand_data.get('msp_invoice_amt', 0) + D_total["msp_invoice_amt"]
             D_total["msc_total_customer"] = brand_data.get('msc_total_customer', 0) + D_total["msc_total_customer"]
             D_total["msp_total_customer"] = brand_data.get('msp_total_customer', 0)+ D_total["msp_total_customer"]
             D_total["msc_sales_count"] = brand_data.get('msc_sales_count', 0) + D_total["msc_sales_count"]
             D_total["msp_sales_count"] = brand_data.get('msp_sales_count', 0) + D_total["msp_sales_count"]
             ##
-            D_total["ysc_total_amt"] = brand_data.get('ysc_total_amt', 0) + D_total["ysc_total_amt"]
-            D_total["ysp_total_amt"] = brand_data.get('ysp_total_amt', 0) + D_total["ysp_total_amt"]
+            D_total["ysc_invoice_amt"] = brand_data.get('ysc_invoice_amt', 0) + D_total["ysc_invoice_amt"]
+            D_total["ysp_invoice_amt"] = brand_data.get('ysp_invoice_amt', 0) + D_total["ysp_invoice_amt"]
             D_total["ysc_total_customer"] = brand_data.get('ysc_total_customer', 0)+ D_total["ysc_total_customer"]
             D_total["ysp_total_customer"] = brand_data.get('ysp_total_customer', 0)+ D_total["ysp_total_customer"]
             D_total["ysc_sales_count"] = brand_data.get('ysc_sales_count', 0) + D_total["ysc_sales_count"]
@@ -436,27 +462,27 @@ def getdailydata(User,Date):
         brd=[
             total,                 # 店名
             '', 
-            totals[total]["dsc_total_amt"],
-            totals[total]["dsp_total_amt"],
-            totals[total]["dsc_total_amt"] / totals[total]["dsp_total_amt"] if totals[total]["dsp_total_amt"] else None,
+            totals[total]["dsc_invoice_amt"],
+            totals[total]["dsp_invoice_amt"],
+            totals[total]["dsc_invoice_amt"] / totals[total]["dsp_invoice_amt"] if totals[total]["dsp_invoice_amt"] else None,
             totals[total]["dsc_total_customer"],
             totals[total]["dsp_total_customer"],
             totals[total]["dsc_total_customer"] / totals[total]["dsp_total_customer"] if totals[total]["dsp_total_customer"] else None,
             totals[total]["dsc_sales_count"],
             totals[total]["dsp_sales_count"],
             totals[total]["dsc_sales_count"] / totals[total]["dsp_sales_count"] if totals[total]["dsp_sales_count"] else None,
-            totals[total]["msc_total_amt"],
-            totals[total]["msp_total_amt"],
-            totals[total]["msc_total_amt"] / totals[total]["msp_total_amt"] if totals[total]["msp_total_amt"] else None,
+            totals[total]["msc_invoice_amt"],
+            totals[total]["msp_invoice_amt"],
+            totals[total]["msc_invoice_amt"] / totals[total]["msp_invoice_amt"] if totals[total]["msp_invoice_amt"] else None,
             totals[total]["msc_total_customer"],
             totals[total]["msp_total_customer"],
             totals[total]["msc_total_customer"] / totals[total]["msp_total_customer"] if totals[total]["msp_total_customer"] else None,
             totals[total]["msc_sales_count"],
             totals[total]["msp_sales_count"],
             totals[total]["msc_sales_count"] / totals[total]["msp_sales_count"] if totals[total]["msp_sales_count"] else None,
-            totals[total]["ysc_total_amt"],
-            totals[total]["ysp_total_amt"],
-            totals[total]["ysc_total_amt"] / totals[total]["ysp_total_amt"] if totals[total]["ysp_total_amt"] else None,
+            totals[total]["ysc_invoice_amt"],
+            totals[total]["ysp_invoice_amt"],
+            totals[total]["ysc_invoice_amt"] / totals[total]["ysp_invoice_amt"] if totals[total]["ysp_invoice_amt"] else None,
             totals[total]["ysc_total_customer"],
             totals[total]["ysp_total_customer"],
             totals[total]["ysc_total_customer"] / totals[total]["ysp_total_customer"] if totals[total]["ysp_total_customer"] else None,
@@ -471,27 +497,27 @@ def getdailydata(User,Date):
     D_TOTAL_DATA=[
         'Total',                 # 店名
         '',     
-        D_total["dsc_total_amt"],
-        D_total["dsp_total_amt"],
-        D_total["dsc_total_amt"] / D_total["dsp_total_amt"] if D_total["dsp_total_amt"] else None,
+        D_total["dsc_invoice_amt"],
+        D_total["dsp_invoice_amt"],
+        D_total["dsc_invoice_amt"] / D_total["dsp_invoice_amt"] if D_total["dsp_invoice_amt"] else None,
         D_total["dsc_total_customer"],
         D_total["dsp_total_customer"],
         D_total["dsc_total_customer"] / D_total["dsp_total_customer"] if D_total["dsp_total_customer"] else None,
         D_total["dsc_sales_count"],
         D_total["dsp_sales_count"],
         D_total["dsc_sales_count"] / D_total["dsp_sales_count"] if D_total["dsp_sales_count"] else None,
-        D_total["msc_total_amt"],
-        D_total["msp_total_amt"],
-        D_total["msc_total_amt"] / D_total["msp_total_amt"] if D_total["msp_total_amt"] else None,
+        D_total["msc_invoice_amt"],
+        D_total["msp_invoice_amt"],
+        D_total["msc_invoice_amt"] / D_total["msp_invoice_amt"] if D_total["msp_invoice_amt"] else None,
         D_total["msc_total_customer"],
         D_total["msp_total_customer"],
         D_total["msc_total_customer"] / D_total["msp_total_customer"] if D_total["msp_total_customer"] else None,
         D_total["msc_sales_count"],
         D_total["msp_sales_count"],
         D_total["msc_sales_count"] / D_total["msp_sales_count"] if D_total["msp_sales_count"] else None,
-        D_total["ysc_total_amt"],
-        D_total["ysp_total_amt"],
-        D_total["ysc_total_amt"] / D_total["ysp_total_amt"] if D_total["ysp_total_amt"] else None,
+        D_total["ysc_invoice_amt"],
+        D_total["ysp_invoice_amt"],
+        D_total["ysc_invoice_amt"] / D_total["ysp_invoice_amt"] if D_total["ysp_invoice_amt"] else None,
         D_total["ysc_total_customer"],
         D_total["ysp_total_customer"],
         D_total["ysc_total_customer"] / D_total["ysp_total_customer"] if D_total["ysp_total_customer"] else None,
@@ -1266,10 +1292,10 @@ scheduler.start()
 # excelmake('A14176',day,data,5)
 #day = datetime.today().strftime("%Y-%m-%d")
 
-day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
-day='2026-03-10'
-data=getdailydata("A14176",day)
-excelmake('A14176',day,data,5)
+# day = (datetime.today() - timedelta(days=1)).strftime("%Y-%m-%d")
+# day='2026-03-15'
+# data=getdailydata("A14176",day)
+# excelmake('A14176',day,data,5)
 # update_store()
 # #使用FLASK啟動須解除，目前以Gunicorn啟動
 # if __name__ == "__main__":
