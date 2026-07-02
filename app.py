@@ -384,7 +384,11 @@ def getdailydata(User,Date):
             r["ysc_sales_count"] / r["ysp_sales_count"] if r["ysp_sales_count"] else None,  # 比例
         ]
         # key = f"{r["store_name"][0]}Total" # 取第一個字
-        key=f"{brand_map[r["store_name"][0]]}Total"
+        store_name = r["store_name"]
+        if store_name=='KEN香南港Citylink店':
+            key="美利Total"
+        else:
+            key=f"{brand_map[r["store_name"][0]]}Total"
         #print(brand_map[r["store_name"][0]])
         # if key not in keys:
         #     keys.append(key)
