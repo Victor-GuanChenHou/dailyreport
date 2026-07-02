@@ -51,7 +51,8 @@ brand_map = {
         '勝': '京都勝牛',
         '雞': '雞三和',
         '大': '大阪王將',
-        '京': '京都勝牛'
+        '京': '京都勝牛',
+        '美': '美利'
     }
 def safe_float(val):
     return float(val) if val is not None else 0.0
@@ -160,62 +161,70 @@ def getdailydata(User,Date):
         filtered_stores = [stor["value"] for stor in stores if stor["value"].startswith(target_id)]   
         if target_id=='a03':
             filtered_stores.append('x03002')
-        print(filtered_stores)
         placeholders = ', '.join(['?'] * len(filtered_stores))
-        sql_query = f"""
-            SELECT SUM(invoice_amt) AS invoice_amt,
-            SUM(total_customer) AS total_customer,
-            SUM(sales_count) AS sales_count
-            FROM kingza_api.dbo.SalesAggregate 
-            WHERE DATE = ? AND store_id IN ({placeholders})
-        """
-        params = [Date] + filtered_stores
-        cursor.execute(sql_query, params)
-        dsc_total = cursor.fetchall()
-        params = [Date_last_year] + filtered_stores
-        cursor.execute(sql_query, params)
-        dsp_total = cursor.fetchall()
-        sql_query = f"""
-            SELECT SUM(invoice_amt) AS invoice_amt,
-            SUM(total_customer) AS total_customer,
-            SUM(sales_count) AS sales_count
-            FROM kingza_api.dbo.SalesAggregateByMonth 
-            WHERE Month = ? AND store_id IN ({placeholders})
-        """
-        params = [DateMonth] + filtered_stores
-        cursor.execute(sql_query, params)
-        msc_total = cursor.fetchall()
-        sql_query = f"""
-            SELECT SUM(invoice_amt) AS invoice_amt,
-            SUM(total_customer) AS total_customer,
-            SUM(sales_count) AS sales_count
-            FROM kingza_api.dbo.SalesAggregate 
-            WHERE DATE >= ? AND DATE <= ? AND store_id IN ({placeholders})
-        """
-        params = [start_of_month_last_year] +[Date_last_year] + filtered_stores
-        cursor.execute(sql_query, params)
-        msp_total = cursor.fetchall()
-        sql_query = f"""
-            SELECT SUM(invoice_amt) AS invoice_amt,
-            SUM(total_customer) AS total_customer,
-            SUM(sales_count) AS sales_count
-            FROM kingza_api.dbo.SalesAggregateByMonth 
-            WHERE Month >= ? AND Month <= ? AND store_id IN ({placeholders})
-        """
-        params = [FirstMonth] +[DateMonth]+ filtered_stores
-        cursor.execute(sql_query, params)
-        ysc_total = cursor.fetchall()
-        sql_query = f"""
-            SELECT SUM(invoice_amt) AS invoice_amt,
-            SUM(total_customer) AS total_customer,
-            SUM(sales_count) AS sales_count
-            FROM kingza_api.dbo.SalesAggregate 
-            WHERE DATE >= ? AND DATE <= ? AND store_id IN ({placeholders})
-        """
-        #print(first_month_last_year,Date_last_year)
-        params = [first_month_last_year] +[Date_last_year]+ filtered_stores
-        cursor.execute(sql_query, params)
-        ysp_total = cursor.fetchall()
+        if not filtered_stores:
+            dsc_total=[]
+            dsp_total=[]
+            msc_total=[]
+            msp_total=[]
+            ysc_total=[]
+            ysp_total=[]
+        else:
+            sql_query = f"""
+                SELECT SUM(invoice_amt) AS invoice_amt,
+                SUM(total_customer) AS total_customer,
+                SUM(sales_count) AS sales_count
+                FROM kingza_api.dbo.SalesAggregate 
+                WHERE DATE = ? AND store_id IN ({placeholders})
+            """
+            params = [Date] + filtered_stores
+            cursor.execute(sql_query, params)
+            dsc_total = cursor.fetchall()
+            params = [Date_last_year] + filtered_stores
+            cursor.execute(sql_query, params)
+            dsp_total = cursor.fetchall()
+            sql_query = f"""
+                SELECT SUM(invoice_amt) AS invoice_amt,
+                SUM(total_customer) AS total_customer,
+                SUM(sales_count) AS sales_count
+                FROM kingza_api.dbo.SalesAggregateByMonth 
+                WHERE Month = ? AND store_id IN ({placeholders})
+            """
+            params = [DateMonth] + filtered_stores
+            cursor.execute(sql_query, params)
+            msc_total = cursor.fetchall()
+            sql_query = f"""
+                SELECT SUM(invoice_amt) AS invoice_amt,
+                SUM(total_customer) AS total_customer,
+                SUM(sales_count) AS sales_count
+                FROM kingza_api.dbo.SalesAggregate 
+                WHERE DATE >= ? AND DATE <= ? AND store_id IN ({placeholders})
+            """
+            params = [start_of_month_last_year] +[Date_last_year] + filtered_stores
+            cursor.execute(sql_query, params)
+            msp_total = cursor.fetchall()
+            sql_query = f"""
+                SELECT SUM(invoice_amt) AS invoice_amt,
+                SUM(total_customer) AS total_customer,
+                SUM(sales_count) AS sales_count
+                FROM kingza_api.dbo.SalesAggregateByMonth 
+                WHERE Month >= ? AND Month <= ? AND store_id IN ({placeholders})
+            """
+            params = [FirstMonth] +[DateMonth]+ filtered_stores
+            cursor.execute(sql_query, params)
+            ysc_total = cursor.fetchall()
+            
+            sql_query = f"""
+                SELECT SUM(invoice_amt) AS invoice_amt,
+                SUM(total_customer) AS total_customer,
+                SUM(sales_count) AS sales_count
+                FROM kingza_api.dbo.SalesAggregate 
+                WHERE DATE >= ? AND DATE <= ? AND store_id IN ({placeholders})
+            """
+            #print(first_month_last_year,Date_last_year)
+            params = [first_month_last_year] +[Date_last_year]+ filtered_stores
+            cursor.execute(sql_query, params)
+            ysp_total = cursor.fetchall()
 
         cpdata={
             "dsc_invoice_amt": safe_float(dsc_total[0][0]),
@@ -248,7 +257,7 @@ def getdailydata(User,Date):
             "ysp_sales_count": safe_int(ysp_total[0][2])
         }
         key_brand[brand['brand_name']]=cpdata
-        #print(brand['brand_name'])
+        print(brand['brand_name'])
 
     
     for store_id in depart :
