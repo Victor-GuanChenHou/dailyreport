@@ -161,6 +161,8 @@ def getdailydata(User,Date):
         filtered_stores = [stor["value"] for stor in stores if stor["value"].startswith(target_id)]   
         if target_id=='a03':
             filtered_stores.append('x03002')
+        elif target_id=='m03':
+            filtered_stores.append('ke03001')
         placeholders = ', '.join(['?'] * len(filtered_stores))
         if not filtered_stores:
             dsc_total=[]
