@@ -400,14 +400,14 @@ def getdailydata(User,Date):
         #     ]    
         #     print(filtered_stores)
         if key not in totals:
-            brand_data_source = key_brand.get(key, {
+            key_brand[key] = {
                 "dsc_invoice_amt": 0, "dsc_total_customer": 0, "dsc_sales_count": 0,
                 "dsp_invoice_amt": 0, "dsp_total_customer": 0, "dsp_sales_count": 0,
                 "msc_invoice_amt": 0, "msc_total_customer": 0, "msc_sales_count": 0,
                 "msp_invoice_amt": 0, "msp_total_customer": 0, "msp_sales_count": 0,
                 "ysc_invoice_amt": 0, "ysc_total_customer": 0, "ysc_sales_count": 0,
                 "ysp_invoice_amt": 0, "ysp_total_customer": 0, "ysp_sales_count": 0
-            })
+            }
             totals[key] = {
             
                 "dsc_invoice_amt": key_brand[key]['dsc_invoice_amt'],
