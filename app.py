@@ -226,38 +226,38 @@ def getdailydata(User,Date):
             cursor.execute(sql_query, params)
             ysp_total = cursor.fetchall()
 
-        cpdata={
-            "dsc_invoice_amt": safe_float(dsc_total[0][0]),
-            "dsc_total_customer": safe_int(dsc_total[0][1]),
-            "dsc_sales_count": safe_int(dsc_total[0][2]),
-            
-            
-            "dsp_invoice_amt": safe_float(dsp_total[0][0]),
-            "dsp_total_customer": safe_int(dsp_total[0][1]),
-            "dsp_sales_count": safe_int(dsp_total[0][2]),
-            
+            cpdata={
+                "dsc_invoice_amt": safe_float(dsc_total[0][0]),
+                "dsc_total_customer": safe_int(dsc_total[0][1]),
+                "dsc_sales_count": safe_int(dsc_total[0][2]),
+                
+                
+                "dsp_invoice_amt": safe_float(dsp_total[0][0]),
+                "dsp_total_customer": safe_int(dsp_total[0][1]),
+                "dsp_sales_count": safe_int(dsp_total[0][2]),
+                
 
-            "msc_invoice_amt": safe_float(msc_total[0][0]),
-            "msc_total_customer": safe_int(msc_total[0][1]),
-            "msc_sales_count": safe_int(msc_total[0][2]),
-            
+                "msc_invoice_amt": safe_float(msc_total[0][0]),
+                "msc_total_customer": safe_int(msc_total[0][1]),
+                "msc_sales_count": safe_int(msc_total[0][2]),
+                
 
-            "msp_invoice_amt": safe_float(msp_total[0][0]),
-            "msp_total_customer": safe_int(msp_total[0][1]),
-            "msp_sales_count": safe_int(msp_total[0][2]),
-            
+                "msp_invoice_amt": safe_float(msp_total[0][0]),
+                "msp_total_customer": safe_int(msp_total[0][1]),
+                "msp_sales_count": safe_int(msp_total[0][2]),
+                
 
-            "ysc_invoice_amt": safe_float(ysc_total[0][0]),
-            "ysc_total_customer": safe_int(ysc_total[0][1]),
-            "ysc_sales_count": safe_int(ysc_total[0][2]),
-            
+                "ysc_invoice_amt": safe_float(ysc_total[0][0]),
+                "ysc_total_customer": safe_int(ysc_total[0][1]),
+                "ysc_sales_count": safe_int(ysc_total[0][2]),
+                
 
-            "ysp_invoice_amt": safe_float(ysp_total[0][0]),
-            "ysp_total_customer": safe_int(ysp_total[0][1]),
-            "ysp_sales_count": safe_int(ysp_total[0][2])
-        }
-        key_brand[brand['brand_name']]=cpdata
-        print(brand['brand_name'])
+                "ysp_invoice_amt": safe_float(ysp_total[0][0]),
+                "ysp_total_customer": safe_int(ysp_total[0][1]),
+                "ysp_sales_count": safe_int(ysp_total[0][2])
+            }
+            key_brand[brand['brand_name']]=cpdata
+            print(brand['brand_name'])
 
     
     for store_id in depart :
