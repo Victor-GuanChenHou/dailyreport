@@ -1329,6 +1329,6 @@ scheduler.start()
 # excelmake('A14176',day,data,5)
 
 # #使用FLASK啟動須解除，目前以Gunicorn啟動
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    app.run(host="0.0.0.0", port=8018)
+#     app.run(host="0.0.0.0", port=8018)
